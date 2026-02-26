@@ -1,0 +1,23 @@
+# Ignore everything
+*
+
+# Whitelist: project files
+!.gitignore
+!README.md
+!MILESTONE1.md
+!MILESTONE2.md
+!MILESTONE1.pdf
+!eda_article_counts.png
+!index.html
+
+# Whitelist: source
+!src/
+!src/css/
+!src/css/*.css
+!src/js/
+!src/js/*.js
+
+# Whitelist: scripts
+!scripts/
+!scripts/*.py
+

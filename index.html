@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2.2 Million Stories — Mapping the NYT</title>
+
+    <!-- D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- TopoJSON for world map -->
+    <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="src/css/style.css">
+</head>
+<body>
+    <!-- Fixed background dot map -->
+    <svg id="bg-map"></svg>
+
+    <!-- Header -->
+    <header>
+        <div class="header-text">
+            <h1>2.2 Million Stories</h1>
+            <p class="subtitle">What 25 years of the New York Times tell us about the world</p>
+            <p class="subtitle">COM-480 Data Visualization - EPFL</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Interactive Co-occurrence Map -->
+        <section id="cooc-visualization">
+            <h2>Which Countries Share Headlines?</h2>
+            <p id="cooc-description">Countries that appear together in NYT articles. Watch the connections unfold.</p>
+            <div id="cooc-container">
+                <svg id="cooc-svg"></svg>
+            </div>
+            <div id="cooc-tooltip" class="tooltip"></div>
+            <div id="connection-panel" style="display:none;"></div>
+        </section>
+
+        <!-- World Map: Front Page Coverage Trend -->
+        <section id="map-visualization">
+            <h2>Who Makes the Front Page?</h2>
+            <p id="map-description">How NYT front page country mentions shifted over 25 years. Arrows show the trend.</p>
+            <div id="map-controls">
+                <div id="map-mode-toggle">
+                    <button class="map-mode-btn active" data-mode="trend">Trend</button>
+                    <button class="map-mode-btn" data-mode="year">By Year</button>
+                </div>
+                <div id="map-year-controls" style="display:none">
+                    <input type="range" id="map-year-slider" min="2000" max="2023" value="2000">
+                    <span id="map-year-label">2000</span>
+                </div>
+            </div>
+            <div id="map-container">
+                <svg id="map-svg"></svg>
+            </div>
+            <div id="map-tooltip" class="tooltip"></div>
+        </section>
+
+        <!-- US City Bubble Map -->
+        <section id="bubble-map-visualization">
+            <h2>Where in the US Does the NYT Report From?</h2>
+            <p id="bubble-description">City-level dateline mentions across 2.2M articles. Bigger bubble, more coverage.</p>
+            <div id="bubble-container">
+                <svg id="bubble-svg"></svg>
+            </div>
+            <div id="bubble-tooltip" class="tooltip"></div>
+        </section>
+
+        <!-- Word Count by Region -->
+        <section id="wordcount-visualization">
+            <h2>Which Countries Get Longer Articles?</h2>
+            <p id="wordcount-description">Average word count per article by mentioned country. Darker means longer coverage.</p>
+            <div id="wordcount-container">
+                <svg id="wordcount-svg"></svg>
+            </div>
+            <div id="wordcount-tooltip" class="tooltip"></div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2025 EPFL - COM-480 Data Visualization</p>
+    </footer>
+
+    <!-- Custom JavaScript -->
+    <script src="src/js/map.js"></script>
+    <script src="src/js/cooccurrence.js"></script>
+    <script src="src/js/bubblemap.js"></script>
+    <script src="src/js/wordcount.js"></script>
+
+    <!-- Typewriter effect on section titles + descriptions -->
+    <script>
+    (function() {
+        // Nearby keys for realistic typos
+        const nearby = {
+            a:'sq',b:'vn',c:'xv',d:'sf',e:'wr',f:'dg',g:'fh',h:'gj',i:'uo',j:'hk',
+            k:'jl',l:'k',m:'n',n:'bm',o:'ip',p:'o',q:'w',r:'et',s:'ad',t:'ry',
+            u:'yi',v:'cb',w:'qe',x:'zc',y:'tu',z:'x'
+        };
+
+        function typewrite(el, text, speed, typoChance) {
+            typoChance = typoChance || 0;
+            return new Promise(resolve => {
+                el.classList.add('typing');
+                el.textContent = '';
+                const cursor = document.createElement('span');
+                cursor.className = 'typewriter-cursor';
+                cursor.innerHTML = '&nbsp;';
+                el.appendChild(cursor);
+
+                let i = 0;
+                function tick() {
+                    if (i < text.length) {
+                        // Maybe make a typo
+                        const ch = text[i];
+                        const keys = nearby[ch.toLowerCase()];
+                        if (typoChance > 0 && keys && Math.random() < typoChance) {
+                            const wrong = keys[Math.floor(Math.random() * keys.length)];
+                            el.insertBefore(document.createTextNode(wrong), cursor);
+                            setTimeout(() => {
+                                // Remove the wrong character
+                                cursor.previousSibling.remove();
+                                setTimeout(() => {
+                                    // Type the correct one
+                                    el.insertBefore(document.createTextNode(ch), cursor);
+                                    i++;
+                                    setTimeout(tick, speed);
+                                }, speed);
+                            }, speed * 3);
+                        } else {
+                            el.insertBefore(document.createTextNode(ch), cursor);
+                            i++;
+                            setTimeout(tick, speed);
+                        }
+                    } else {
+                        setTimeout(() => {
+                            cursor.style.opacity = '0';
+                            resolve();
+                        }, 400);
+                    }
+                }
+                tick();
+            });
+        }
+
+        // Header typewriter on load
+        const h1 = document.querySelector('header h1');
+        const subtitles = document.querySelectorAll('header .subtitle');
+        if (h1 && subtitles.length) {
+            const h1Text = h1.textContent;
+            h1.style.minHeight = h1.offsetHeight + 'px';
+            h1.textContent = '';
+            h1.classList.add('typewriter');
+            const subData = [];
+            subtitles.forEach(el => {
+                subData.push({ el, text: el.textContent });
+                el.style.minHeight = el.offsetHeight + 'px';
+                el.textContent = '';
+                el.classList.add('typewriter');
+            });
+            typewrite(h1, h1Text, 80, 0.08).then(async () => {
+                for (const s of subData) {
+                    await typewrite(s.el, s.text, 45, 0.05);
+                }
+            });
+        }
+
+        // Find all sections with h2 + description paragraph
+        const sections = document.querySelectorAll('main > section');
+        const typing = new Set();
+
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                const h2 = entry.target.querySelector('h2');
+                if (!h2) return;
+
+                if (entry.isIntersecting && !typing.has(h2)) {
+                    typing.add(h2);
+                    typewrite(h2, h2.dataset.text, 50, 0.06).then(() => typing.delete(h2));
+                } else if (!entry.isIntersecting && !typing.has(h2)) {
+                    h2.textContent = '';
+                    h2.classList.remove('typing');
+                }
+            });
+        }, { threshold: 0.15 });
+
+        // Prepare elements: stash text, reserve height
+        sections.forEach(section => {
+            const h2 = section.querySelector('h2');
+
+            if (h2) {
+                h2.dataset.text = h2.textContent;
+                h2.style.minHeight = h2.offsetHeight + 'px';
+                h2.textContent = '';
+                h2.classList.add('typewriter');
+            }
+
+            observer.observe(section);
+        });
+
+    })();
+    </script>
+
+    <!-- Background: continuous dot map with country labels -->
+    <script>
+    (function() {
+        const TOPO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
+        const DATA_URL = 'src/data/processed/country_mentions.json';
+        const W = 960, H = 500;
+        const MAX_DOTS = 20;
+        const SPAWN_INTERVAL = 1400;
+        const DOT_LIFE_MIN = 6000;
+        const DOT_LIFE_MAX = 12000;
+
+        const NUMERIC_TO_ALPHA3 = {
+            "004":"AFG","008":"ALB","012":"DZA","024":"AGO","032":"ARG","036":"AUS",
+            "040":"AUT","031":"AZE","050":"BGD","056":"BEL","068":"BOL","070":"BIH",
+            "076":"BRA","100":"BGR","120":"CMR","124":"CAN","152":"CHL","156":"CHN",
+            "170":"COL","180":"COD","192":"CUB","203":"CZE","208":"DNK","818":"EGY",
+            "231":"ETH","246":"FIN","250":"FRA","276":"DEU","288":"GHA","300":"GRC",
+            "320":"GTM","332":"HTI","348":"HUN","356":"IND","360":"IDN","364":"IRN",
+            "368":"IRQ","372":"IRL","376":"ISR","380":"ITA","392":"JPN","404":"KEN",
+            "408":"PRK","410":"KOR","414":"KWT","422":"LBN","434":"LBY","458":"MYS",
+            "484":"MEX","504":"MAR","508":"MOZ","104":"MMR","524":"NPL","528":"NLD",
+            "554":"NZL","566":"NGA","578":"NOR","586":"PAK","604":"PER","608":"PHL",
+            "616":"POL","620":"PRT","642":"ROU","643":"RUS","682":"SAU","686":"SEN",
+            "688":"SRB","706":"SOM","710":"ZAF","724":"ESP","144":"LKA","736":"SDN",
+            "752":"SWE","756":"CHE","760":"SYR","764":"THA","788":"TUN","792":"TUR",
+            "800":"UGA","804":"UKR","784":"ARE","826":"GBR","840":"USA","858":"URY",
+            "862":"VEN","704":"VNM","887":"YEM","894":"ZMB","716":"ZWE"
+        };
+
+        async function init() {
+            const [topo, mentions] = await Promise.all([
+                d3.json(TOPO_URL),
+                d3.json(DATA_URL)
+            ]);
+
+            const projection = d3.geoNaturalEarth1().scale(155).translate([W/2, H/2]);
+            const countries = topojson.feature(topo, topo.objects.countries).features;
+
+            const geoPath = d3.geoPath().projection(projection);
+            const countryGeo = {};
+            const countryFeatures = {};
+            countries.forEach(f => {
+                const iso3 = NUMERIC_TO_ALPHA3[f.id] || f.id;
+                const centroid = geoPath.centroid(f);
+                const bounds = geoPath.bounds(f);
+                if (centroid && !isNaN(centroid[0]) && bounds) {
+                    const bw = (bounds[1][0] - bounds[0][0]) * 0.35;
+                    const bh = (bounds[1][1] - bounds[0][1]) * 0.35;
+                    countryGeo[iso3] = { cx: centroid[0], cy: centroid[1], bw, bh };
+                    countryFeatures[iso3] = f;
+                }
+            });
+
+            const countryLookup = {};
+            mentions.countries.forEach(c => { countryLookup[c.id] = c; });
+
+            const pool = [];
+            for (const [iso3, geo] of Object.entries(countryGeo)) {
+                const c = countryLookup[iso3];
+                if (!c) continue;
+                const total = d3.sum(c.values);
+                if (total > 0) pool.push({ iso3, name: c.name, weight: total });
+            }
+            const totalWeight = d3.sum(pool, d => d.weight);
+
+            function sampleCountry() {
+                let r = Math.random() * totalWeight;
+                for (const p of pool) {
+                    r -= p.weight;
+                    if (r <= 0) return p;
+                }
+                return pool[pool.length - 1];
+            }
+
+            const svg = d3.select('#bg-map')
+                .attr('viewBox', `0 0 ${W} ${H}`)
+                .attr('preserveAspectRatio', 'xMidYMid meet');
+
+            function syncPosition() {
+                const ref = document.getElementById('cooc-svg');
+                const section = document.getElementById('cooc-visualization');
+                if (!ref || !section) return;
+                const bgMap = document.getElementById('bg-map');
+                const refRect = ref.getBoundingClientRect();
+                const secRect = section.getBoundingClientRect();
+                const offsetTop = refRect.top - secRect.top;
+                const mapHeight = refRect.width * (H / W);
+                bgMap.style.width = refRect.width + 'px';
+                bgMap.style.height = mapHeight + 'px';
+                bgMap.style.left = refRect.left + 'px';
+                bgMap.style.top = offsetTop + 'px';
+            }
+            setTimeout(() => {
+                syncPosition();
+                positioned = true;
+                bgMap.style.opacity = '0.65';
+            }, 1500);
+            window.addEventListener('resize', syncPosition);
+
+            const dotsGroup = svg.append('g');
+            let activeDots = 0;
+            const activeCountries = new Set();
+            let spawnCount = 0;
+
+            function spawnDot() {
+                if (activeDots >= MAX_DOTS) return;
+
+                let country, tries = 0;
+                do {
+                    country = sampleCountry();
+                    tries++;
+                } while (activeCountries.has(country.iso3) && tries < 30);
+                if (activeCountries.has(country.iso3)) return;
+
+                const geo = countryGeo[country.iso3];
+                const feature = countryFeatures[country.iso3];
+                if (!geo || !feature) return;
+                activeCountries.add(country.iso3);
+
+                let x, y, attempts = 0;
+                do {
+                    x = geo.cx + (Math.random() - 0.5) * geo.bw * 2;
+                    y = geo.cy + (Math.random() - 0.5) * geo.bh * 2;
+                    const lonLat = projection.invert([x, y]);
+                    if (lonLat && d3.geoContains(feature, lonLat)) break;
+                    attempts++;
+                } while (attempts < 20);
+                if (attempts >= 20) { x = geo.cx; y = geo.cy; }
+                const life = DOT_LIFE_MIN + Math.random() * (DOT_LIFE_MAX - DOT_LIFE_MIN);
+
+                const g = dotsGroup.append('g');
+                const lineLen = 12;
+
+                // Spawn ping: white glow
+                const glow = g.append('circle')
+                    .attr('cx', x).attr('cy', y)
+                    .attr('r', 2)
+                    .attr('fill', 'none')
+                    .attr('stroke', 'white')
+                    .attr('stroke-width', 1.5)
+                    .attr('opacity', 0.7);
+                glow.transition().duration(800)
+                    .attr('r', 7).attr('opacity', 0).remove();
+
+                // Spawn ping: inner flash
+                const flash = g.append('circle')
+                    .attr('cx', x).attr('cy', y)
+                    .attr('r', 0.5)
+                    .attr('fill', 'white')
+                    .attr('opacity', 0.9);
+                flash.transition().duration(600)
+                    .attr('r', 3).attr('opacity', 0).remove();
+
+                // Spawn ping: expanding ring
+                const ring = g.append('circle')
+                    .attr('cx', x).attr('cy', y)
+                    .attr('r', 2)
+                    .attr('fill', 'none')
+                    .attr('stroke', '#3498db')
+                    .attr('stroke-width', 0.5)
+                    .attr('opacity', 0.5);
+                ring.transition().duration(2000)
+                    .attr('r', 18).attr('opacity', 0).remove();
+
+                // Dot
+                const dot = g.append('circle')
+                    .attr('cx', x).attr('cy', y)
+                    .attr('r', 0)
+                    .attr('fill', '#3498db')
+                    .attr('opacity', 0);
+
+                // Line
+                const line = g.append('line')
+                    .attr('x1', x).attr('y1', y)
+                    .attr('x2', x).attr('y2', y)
+                    .attr('stroke', '#3498db')
+                    .attr('stroke-width', 0.5)
+                    .attr('opacity', 0);
+
+                // Label
+                const label = g.append('text')
+                    .attr('x', x)
+                    .attr('y', y - lineLen - 2)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '4px')
+                    .attr('fill', '#8a8fa8')
+                    .attr('opacity', 0.8);
+
+                function typewriteSvg(textEl, text, speed) {
+                    let i = 0;
+                    function tick() {
+                        if (i <= text.length) {
+                            textEl.text(text.slice(0, i));
+                            i++;
+                            setTimeout(tick, speed);
+                        }
+                    }
+                    tick();
+                }
+
+                activeDots++;
+                spawnCount++;
+
+                // Dot -> line -> typewriter label
+                dot.transition()
+                    .duration(300)
+                    .attr('r', 1.5)
+                    .attr('opacity', 1)
+                    .on('end', () => {
+                        line.transition()
+                            .duration(800)
+                            .attr('y2', y - lineLen)
+                            .attr('opacity', 0.6)
+                            .on('end', () => {
+                                typewriteSvg(label, country.name, 40);
+                            });
+                    });
+
+                // Gradual fade to 50% over lifetime
+                dot.transition().delay(300).duration(life * 0.8)
+                    .attr('opacity', 0.5);
+
+                // Collapse animation: label -> line -> dot -> remove
+                setTimeout(() => {
+                    label.transition().duration(600).attr('opacity', 0);
+                    line.transition().delay(300).duration(600)
+                        .attr('y2', y).attr('opacity', 0);
+                    dot.transition().delay(600).duration(800)
+                        .attr('r', 0).attr('opacity', 0)
+                        .on('end', () => { g.remove(); activeDots--; activeCountries.delete(country.iso3); });
+                }, life);
+            }
+
+            // Gradual ramp-up: start with 1 dot, add one every 2.8s until 8, then regular interval
+            spawnDot();
+            let rampCount = 1;
+            const rampInterval = setInterval(() => {
+                spawnDot();
+                rampCount++;
+                if (rampCount >= 8) {
+                    clearInterval(rampInterval);
+                    setInterval(spawnDot, SPAWN_INTERVAL);
+                }
+            }, 2800);
+
+            // Header-only visibility
+            const bgMap = document.getElementById('bg-map');
+            let positioned = false;
+            const bgObserver = new IntersectionObserver(entries => {
+                if (!positioned) return;
+                entries.forEach(entry => {
+                    if (!entry.isIntersecting) return;
+                    const id = entry.target.id || entry.target.tagName.toLowerCase();
+                    bgMap.style.opacity = (id === 'header') ? '0.65' : '0';
+                });
+            }, { threshold: 0.5 });
+
+            bgObserver.observe(document.querySelector('header'));
+            document.querySelectorAll('main > section').forEach(el => bgObserver.observe(el));
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    })();
+    </script>
+</body>
+</html>
