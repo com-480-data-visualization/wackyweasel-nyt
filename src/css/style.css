@@ -18,7 +18,7 @@ html {
 }
 
 body {
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: 'Courier Prime', 'Courier New', monospace;
     line-height: 1.6;
     color: var(--text);
     background: var(--bg);
@@ -327,9 +327,15 @@ section h2 {
     flex: 1;
 }
 
+.panel-spark {
+    flex-shrink: 0;
+}
+
 .panel-count {
     color: var(--blue);
     font-weight: 600;
+    min-width: 45px;
+    text-align: right;
 }
 
 /* US City Bubble Map */
