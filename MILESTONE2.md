@@ -1,106 +1,102 @@
-# Words That Shaped History: Temporal Analysis of NYT Coverage
+# Milestone 2
 
 ## Project Goal
 
-We visualize how the New York Times covers major historical events by analyzing word frequency patterns across 2.2 million articles (2000-2025). Rather than a static overview, we let users compare how language around similar types of events evolved over decades. How did "terrorism" after 9/11 compare to "invasion" during the Ukraine war? Did "economy" dominate Obama-era coverage the same way as Trump-era coverage? Our tool answers these questions through interactive, side-by-side temporal comparisons.
+I visualize how the New York Times covers the world by analyzing geographic patterns across 2.2 million articles (2000-2023). The visualization reveals which countries dominate headlines, how coverage shifts over time, which countries are mentioned together, and where in the US the NYT reports from beyond New York City. The site is a scroll-driven, dark-themed experience with five full-viewport sections, each answering a different question about NYT geographic attention.
 
-The target audience is journalists, political scientists, and anyone curious about how media narratives form around major events. The visualization reveals not just what was covered, but how coverage intensity, duration, and vocabulary shifted across eras.
+Target audience: journalists, media researchers, and anyone curious about how one of the world's most influential newspapers distributes its attention across countries and cities.
 
 ## Visualizations
 
-### 1. Event Comparison Timeline (MVP - Core)
+### 1. Co-occurrence Map (Core)
 
-Two overlapping time series on a shared axis. Each event period is normalized to "months since start" so users can directly compare coverage dynamics. For example, the 9/11 aftermath vs the first months of the Ukraine invasion.
+Animated world map that cycles through countries, drawing arc connections to the countries most frequently co-mentioned in the same articles. A red travel line moves between countries, and a side panel ranks the top co-mentioned partners.
 
-```
-  Mentions/day
-  |        /\
-  |   ____/  \___  9/11 (red)        Key: Dashed vertical lines
-  |  /            \____               mark pivotal dates
-  | /    /\                           (Sept 11, Feb 24 invasion)
-  |/____/  \_______  Ukraine (blue)
-  +-----|-----|-----|-----|---> months
-  0     6    12    18    24
-```
+![Co-occurrence sketch](sketches/cooccurrence.png)
 
-**Interaction**: Click word buttons to switch terms. Hover for daily counts. Toggle between event pairs (wars, presidents).
+**Interaction**: Fully automated animation that loops indefinitely. Arcs are color-coded by impact (article count).
 
-**Tools**: D3.js (d3-scale, d3-shape, d3-transition, d3-axis), SVG
-**Lectures**: Interaction, Perception, Design for data visualization
+**Tools**: D3.js (d3-geo, d3-transition), TopoJSON, Natural Earth
+**Lectures**: Maps, Interaction, Perception
 
-### 2. World Map: Geographic Focus Over Time (Extra)
+### 2. Front Page Trend Map (Core)
 
-Animated choropleth showing how often each country is mentioned in NYT articles per year. A timeline slider lets users scrub through 2000-2025 to see US foreign policy focus shift (Middle East post-9/11, Russia/Ukraine 2022, China trade war).
+World map with two toggle modes:
 
-```
-  +----------------------------------+
-  |  [2003]  ----O------------  [2025]
-  |                                  |
-  |    +------+                      |
-  |    | World map with countries    |
-  |    | shaded by mention freq.     |
-  |    | Dark = high, light = low    |
-  |    +------+                      |
-  +----------------------------------+
-```
+- **Trend**: Diagonal arrows per country showing whether front page mentions increased or decreased over 2000-2023. Blue arrows point up-right (increasing), red arrows point down-right (decreasing). Arrow length is sqrt-scaled by slope magnitude.
+- **By Year**: Vertical arrows showing each country's front page mention percentage for a selected year. A slider scrubs through 2000-2023. Hovering a country triggers a typewriter-animated tooltip cycling through actual NYT headlines from that country and year.
 
-**Tools**: D3.js (d3-geo), TopoJSON, Natural Earth Data
-**Lectures**: Maps, Interaction, Practical maps
+![Front page map sketch](sketches/frontpage.png)
 
-### 3. Gender Analysis: Who Covers What (Extra)
+**Interaction**: Toggle buttons switch modes. Year slider with smooth arrow transitions. Hover tooltips with headline cycling.
 
-Diverging bar chart or stacked area showing topic coverage split by author gender. We infer gender from byline first names using a name-gender dataset, then cross-reference with article topics.
+**Tools**: D3.js (d3-geo, d3-transition, d3-scale), TopoJSON, SVG markers
+**Lectures**: Maps, Interaction, Marks and channels
 
-```
-  Sports    ████████|██
-  Politics  ██████|████
-  Science   ████|██████
-  Arts      ███|███████
-            Male    Female
-```
+### 3. US City Bubble Map (Core)
 
-**Tools**: D3.js (d3-scale, d3-shape), Python (gender inference preprocessing)
-**Lectures**: Marks and channels, Tabular data, Design
+AlbersUSA projection with sqrt-scaled bubbles at each city mentioned in NYT datelines. New York City and Washington DC dominate, but the map reveals surprising secondary cities. Hover tooltips show exact article counts.
+
+![Bubble map sketch](sketches/bubblemap.png)
+
+**Tools**: D3.js (d3-geo, d3-scale), TopoJSON (US states), AlbersUSA projection
+**Lectures**: Maps, Practical maps, Perception
+
+### 4. Word Count by Country Grid (Extra)
+
+Grid cartogram showing average article word count by mentioned country. Darker cells indicate longer average articles. Reveals which countries receive deeper coverage vs brief mentions.
+
+![Word count sketch](sketches/wordcount.png)
+
+**Tools**: D3.js (d3-scale), SVG
+**Lectures**: Tabular data, Marks and channels
+
+### 5. Background Dot Map + Typewriter Effects (Extra)
+
+Fixed SVG overlay on the header showing animated dots spawning at random country locations with bright ping animations, line draw-up, and typewriter country name labels. Dots fade to 50% then collapse. Creates an ambient data-art introduction.
+
+Section titles use a typewriter effect with typo simulation (nearby-key errors that get corrected), re-triggering on each scroll.
+
+**Tools**: D3.js, CSS animations, IntersectionObserver
+**Lectures**: Perception, Design
 
 ## Tools and Lectures Summary
 
 | Component | Tools | Relevant Lectures |
 |-----------|-------|-------------------|
-| Time series overlay | D3.js line/area charts | Interaction, Perception |
-| Word selection UI | D3.js, HTML/CSS | Design, Interaction |
+| World maps (co-occurrence, front page) | D3.js d3-geo, TopoJSON | Maps, Practical maps |
+| Animated arcs and arrows | D3.js d3-transition, SVG markers | Interaction, Perception |
+| US bubble map | D3.js AlbersUSA, d3-scale | Maps, Marks and channels |
+| Word count grid | D3.js d3-scale, SVG | Tabular data, Design |
+| Scroll animations | IntersectionObserver, CSS | Interaction, Perception |
 | Data preprocessing | Python, SQLite | - |
-| World map | D3.js d3-geo, TopoJSON | Maps, Practical maps |
-| Gender analysis | D3.js bar charts, Python NLP | Tabular data, Marks & channels |
-| Responsive layout | CSS Grid/Flexbox | Design |
 
 ## Implementation Breakdown
 
 ### Core Visualization (MVP)
 
-These are required and already functional:
+1. **Co-occurrence map** with automated country cycling, arc connections, travel line, side panel
+2. **Front page trend map** with trend/year toggle, year slider, arrow transitions
+3. **US city bubble map** with sqrt-scaled bubbles, hover tooltips
+4. **Preprocessing pipeline** converting 2.2M articles into lightweight JSON via SQLite
 
-1. **Event comparison timeline** — dual line chart with normalized time axis, word selector buttons, hover tooltips, animated transitions
-2. **Event pair selector** — switch between thematic comparisons (wars, presidents)
-3. **Curated word sets** — 10 pre-selected words per event pair chosen for maximum contrast
-4. **Statistics panel** — peak mentions, averages, side-by-side metrics
-5. **SQLite preprocessing pipeline** — indexed database for fast event-based queries
+### Extra Features
 
-### Extra Features (Enhancements)
-
-These add depth but can be dropped without losing the core story:
-
-6. **World map with timeline slider** — country mention frequency as animated choropleth, showing geographic attention shifts
-7. **Gender-topic analysis** — who writes about what, and how that changed over 25 years
-8. **Additional event pairs** — Financial Crisis vs COVID, other thematic comparisons
-9. **Scrollytelling narrative** — guided story mode that walks users through key insights
-10. **Word search** — let users type custom words instead of only pre-selected ones
+5. **Headline typewriter tooltips** in year mode showing actual NYT front page headlines
+6. **Word count grid** showing article depth by country
+7. **Background dot map** with spawn pings and ambient animation
+8. **Typewriter section titles** with typo simulation
+9. **Scroll-snap full-viewport layout** with dark theme
 
 ## Current Prototype Status
 
-The functional prototype is running and demonstrates the core visualization:
-- Event comparison timeline with 9/11 vs Ukraine War and Obama vs Trump
-- 10 curated words per comparison with instant switching
-- Weekly-aggregated overlay chart with key date annotations
-- Hover tooltips showing both events simultaneously
-- Side-by-side statistics
-- Full preprocessing pipeline (2.2M articles in SQLite, queries in seconds)
+All core and extra visualizations are implemented and functional:
+
+- Co-occurrence autoplay loops through countries with arc animations
+- Front page map supports both trend and year modes with smooth transitions
+- Year mode tooltip cycles real headlines with typewriter animation
+- US bubble map renders 160 cities with correct projections
+- Word count grid displays average article length by country
+- Background dot map animates on the header page
+- All sections trigger animations on scroll via IntersectionObserver
+- Full preprocessing pipeline processes 2.2M articles in minutes
