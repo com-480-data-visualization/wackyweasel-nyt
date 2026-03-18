@@ -81,6 +81,7 @@ This is a new exploration of this dataset, not reused from other courses.
 
 **10% of the final grade**
 
+[See MILESTONE2.md](MILESTONE2.md)
 
 ## Milestone 3 (29th May, 5pm)
 
