@@ -9,8 +9,8 @@
 
     // Sparkline dimensions
     const SPARK_W = 260;
-    const SPARK_H = 90;
-    const SPARK_PAD = { top: 14, right: 8, bottom: 18, left: 8 };
+    const SPARK_H = 70;
+    const SPARK_PAD = { top: 5, right: 5, bottom: 5, left: 5 };
 
     let svg, projection, path, tooltip;
 
@@ -165,23 +165,24 @@
             ` L${(pl + iw).toFixed(1)},${(pt + ih).toFixed(1)}` +
             ` L${pl.toFixed(1)},${(pt + ih).toFixed(1)} Z`;
 
-        // X-axis labels (first, middle, last)
-        const midIdx = Math.floor(years.length / 2);
-        const labels = [
-            { x: pl, label: years[0] },
-            { x: pl + (midIdx / (years.length - 1)) * iw, label: years[midIdx] },
-            { x: pl + iw, label: years[years.length - 1] }
-        ];
-
-        let labelsSvg = labels.map(l =>
-            `<text x="${l.x.toFixed(1)}" y="${h - 2}" text-anchor="middle" font-size="10" fill="#8a8fa8">${l.label}</text>`
-        ).join('');
+        // Calculate total path length for animation
+        let totalLen = 0;
+        for (let i = 1; i < points.length; i++) {
+            const dx = points[i][0] - points[i - 1][0];
+            const dy = points[i][1] - points[i - 1][1];
+            totalLen += Math.sqrt(dx * dx + dy * dy);
+        }
+        const len = Math.ceil(totalLen);
 
         return `<svg width="${w}" height="${h}" style="display:block">` +
-            `<path d="${area}" fill="rgba(52,152,219,0.2)"/>` +
-            `<path d="${line}" fill="none" stroke="#3498db" stroke-width="2"/>` +
-            labelsSvg +
-            `<text x="${w / 2}" y="${pt - 3}" text-anchor="middle" font-size="10" fill="#8a8fa8">% of all articles</text>` +
+            `<style>` +
+            `@keyframes spark-draw { from { stroke-dashoffset: ${len}; } to { stroke-dashoffset: 0; } }` +
+            `@keyframes spark-fill { from { opacity: 0; } to { opacity: 1; } }` +
+            `.spark-line { stroke-dasharray: ${len}; stroke-dashoffset: ${len}; animation: spark-draw 1s ease-out forwards; }` +
+            `.spark-area { opacity: 0; animation: spark-fill 0.5s ease-out 0.8s forwards; }` +
+            `</style>` +
+            `<path class="spark-area" d="${area}" fill="rgba(52,152,219,0.2)"/>` +
+            `<path class="spark-line" d="${line}" fill="none" stroke="#3498db" stroke-width="2"/>` +
             `</svg>`;
     }
 
