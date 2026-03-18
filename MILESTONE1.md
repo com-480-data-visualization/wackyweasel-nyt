@@ -29,7 +29,7 @@ I analyze geographic patterns in NYT headlines across 24 years (2000-2023) to re
 
 **Key statistics** (2.2M articles, 2000-2023): 267,000 articles mention at least one country in the headline, across 149 unique countries. The most mentioned are the United States (24k), China (24k), Iraq (16k), United Kingdom (15k), and Russia (14k). On the domestic side, 188,000 articles are tagged with a US city location, covering 160 unique cities. New York City dominates US coverage (121k articles), followed by Washington DC (15k) and Los Angeles (6k). Total article volume drops from ~110k/year in the early 2000s to ~50k/year in the 2020s, making normalization essential.
 
-![NYT Article Volume and Country Mentions per Year](eda_article_counts.png)
+![NYT Article Volume and Country Mentions per Year](images/eda_article_counts.png)
 
 I exclude 2024 and 2025 from the analysis because these years have incomplete data, which would skew normalized values and trend calculations. Note that 2023 also has fewer articles than previous years, but I kept it in the analysis since it still contains enough data to be meaningful.
 
