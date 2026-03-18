@@ -9,8 +9,8 @@
 
     // Sparkline dimensions
     const SPARK_W = 260;
-    const SPARK_H = 70;
-    const SPARK_PAD = { top: 5, right: 5, bottom: 5, left: 5 };
+    const SPARK_H = 85;
+    const SPARK_PAD = { top: 8, right: 10, bottom: 18, left: 32 };
 
     let svg, projection, path, tooltip;
 
@@ -174,6 +174,27 @@
         }
         const len = Math.ceil(totalLen);
 
+        // Y-axis: 2-3 tick marks
+        const niceMax = maxVal;
+        const yTicks = [0, niceMax / 2, niceMax];
+        let yAxisSvg = '';
+        yTicks.forEach(v => {
+            const y = pt + ih - (v / maxVal) * ih;
+            const label = v < 1 ? v.toFixed(2) : v < 10 ? v.toFixed(1) : Math.round(v);
+            // Gridline
+            yAxisSvg += `<line x1="${pl}" y1="${y.toFixed(1)}" x2="${pl + iw}" y2="${y.toFixed(1)}" stroke="#2a3555" stroke-width="0.5"/>`;
+            // Label
+            yAxisSvg += `<text x="${pl - 4}" y="${(y + 3).toFixed(1)}" text-anchor="end" font-size="9" fill="#6a7088">${label}%</text>`;
+        });
+
+        // X-axis: first, middle, last year
+        const xTicks = [0, Math.floor((years.length - 1) / 2), years.length - 1];
+        let xAxisSvg = '';
+        xTicks.forEach(i => {
+            const x = pl + (i / (pctValues.length - 1)) * iw;
+            xAxisSvg += `<text x="${x.toFixed(1)}" y="${pt + ih + 13}" text-anchor="middle" font-size="9" fill="#6a7088">${years[i]}</text>`;
+        });
+
         return `<svg width="${w}" height="${h}" style="display:block">` +
             `<style>` +
             `@keyframes spark-draw { from { stroke-dashoffset: ${len}; } to { stroke-dashoffset: 0; } }` +
@@ -181,6 +202,8 @@
             `.spark-line { stroke-dasharray: ${len}; stroke-dashoffset: ${len}; animation: spark-draw 1s ease-out forwards; }` +
             `.spark-area { opacity: 0; animation: spark-fill 0.5s ease-out 0.8s forwards; }` +
             `</style>` +
+            yAxisSvg +
+            xAxisSvg +
             `<path class="spark-area" d="${area}" fill="rgba(52,152,219,0.2)"/>` +
             `<path class="spark-line" d="${line}" fill="none" stroke="#3498db" stroke-width="2"/>` +
             `</svg>`;
