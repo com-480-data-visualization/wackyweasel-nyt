@@ -8,9 +8,9 @@
     const DATA_URL = 'src/data/processed/us_city_mentions.json';
 
     // Sparkline dimensions
-    const SPARK_W = 200;
-    const SPARK_H = 60;
-    const SPARK_PAD = { top: 5, right: 5, bottom: 15, left: 5 };
+    const SPARK_W = 260;
+    const SPARK_H = 90;
+    const SPARK_PAD = { top: 14, right: 8, bottom: 18, left: 8 };
 
     let svg, projection, path, tooltip;
 
@@ -174,14 +174,14 @@
         ];
 
         let labelsSvg = labels.map(l =>
-            `<text x="${l.x.toFixed(1)}" y="${h}" text-anchor="middle" font-size="9" fill="#8a8fa8">${l.label}</text>`
+            `<text x="${l.x.toFixed(1)}" y="${h - 2}" text-anchor="middle" font-size="10" fill="#8a8fa8">${l.label}</text>`
         ).join('');
 
         return `<svg width="${w}" height="${h}" style="display:block">` +
-            `<path d="${area}" fill="rgba(52,152,219,0.15)"/>` +
-            `<path d="${line}" fill="none" stroke="#3498db" stroke-width="1.5"/>` +
+            `<path d="${area}" fill="rgba(52,152,219,0.2)"/>` +
+            `<path d="${line}" fill="none" stroke="#3498db" stroke-width="2"/>` +
             labelsSvg +
-            `<text x="${w / 2}" y="${pt - 1}" text-anchor="middle" font-size="9" fill="#8a8fa8">% of all articles</text>` +
+            `<text x="${w / 2}" y="${pt - 3}" text-anchor="middle" font-size="10" fill="#8a8fa8">% of all articles</text>` +
             `</svg>`;
     }
 
