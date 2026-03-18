@@ -7,13 +7,22 @@
     const TOPO_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json';
     const DATA_URL = 'src/data/processed/us_city_mentions.json';
 
+    // Sparkline dimensions
+    const SPARK_W = 200;
+    const SPARK_H = 60;
+    const SPARK_PAD = { top: 5, right: 5, bottom: 15, left: 5 };
+
     let svg, projection, path, tooltip;
 
     async function initBubbleMap() {
-        const [topo, cities] = await Promise.all([
+        const [topo, data] = await Promise.all([
             d3.json(TOPO_URL),
             d3.json(DATA_URL)
         ]);
+
+        // Support both old format (array) and new format ({years, cities})
+        const cities = Array.isArray(data) ? data : data.cities;
+        const years = Array.isArray(data) ? null : data.years;
 
         // SVG setup
         svg = d3.select('#bubble-svg')
@@ -49,7 +58,7 @@
             .attr('class', 'us-state-border')
             .attr('d', path);
 
-        // Filter cities that project onto the map (AlbersUsa returns null for non-US coords)
+        // Filter cities that project onto the map
         const mappedCities = cities
             .map(c => {
                 const coords = projection([c.lon, c.lat]);
@@ -57,17 +66,17 @@
             })
             .filter(Boolean);
 
-        // Bubble size scale (sqrt for area-proportional)
+        // Bubble size scale
         const countExtent = d3.extent(mappedCities, d => d.count);
         const radiusScale = d3.scaleSqrt()
             .domain(countExtent)
             .range([3, 50]);
 
-        // Color scale — darker for more mentions
+        // Color scale
         const colorScale = d3.scaleSequentialLog(d3.interpolateYlOrRd)
             .domain(countExtent);
 
-        // Draw bubbles (sorted largest first so small ones render on top)
+        // Draw bubbles (sorted largest first)
         mappedCities.sort((a, b) => b.count - a.count);
 
         svg.append('g')
@@ -87,11 +96,18 @@
                 d3.select(this)
                     .attr('opacity', 1)
                     .attr('stroke-width', 2);
+
+                let html = `<strong>${d.city}, ${d.state}</strong><br>${d.count.toLocaleString()} articles`;
+
+                if (years && d.pct_by_year) {
+                    html += `<div style="margin-top:6px">${buildSparkline(d.pct_by_year, years)}</div>`;
+                }
+
                 tooltip
                     .style('opacity', 1)
                     .style('left', (event.pageX + 12) + 'px')
                     .style('top', (event.pageY - 28) + 'px')
-                    .html(`<strong>${d.city}, ${d.state}</strong><br>${d.count.toLocaleString()} articles`);
+                    .html(html);
             })
             .on('mousemove', function (event) {
                 tooltip
@@ -111,7 +127,6 @@
                 if (!entry.isIntersecting) return;
                 observer.disconnect();
 
-                // Pop in bubbles
                 svg.selectAll('.city-bubble')
                     .transition()
                     .delay((d, i) => i * 12)
@@ -125,7 +140,51 @@
         observer.observe(document.getElementById('bubble-map-visualization'));
     }
 
-    // Boot when DOM is ready
+    function buildSparkline(pctValues, years) {
+        const w = SPARK_W;
+        const h = SPARK_H;
+        const pl = SPARK_PAD.left;
+        const pr = SPARK_PAD.right;
+        const pt = SPARK_PAD.top;
+        const pb = SPARK_PAD.bottom;
+        const iw = w - pl - pr;
+        const ih = h - pt - pb;
+
+        const maxVal = Math.max(...pctValues, 0.001);
+
+        const points = pctValues.map((v, i) => {
+            const x = pl + (i / (pctValues.length - 1)) * iw;
+            const y = pt + ih - (v / maxVal) * ih;
+            return [x, y];
+        });
+
+        const line = points.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+
+        // Area fill
+        const area = line +
+            ` L${(pl + iw).toFixed(1)},${(pt + ih).toFixed(1)}` +
+            ` L${pl.toFixed(1)},${(pt + ih).toFixed(1)} Z`;
+
+        // X-axis labels (first, middle, last)
+        const midIdx = Math.floor(years.length / 2);
+        const labels = [
+            { x: pl, label: years[0] },
+            { x: pl + (midIdx / (years.length - 1)) * iw, label: years[midIdx] },
+            { x: pl + iw, label: years[years.length - 1] }
+        ];
+
+        let labelsSvg = labels.map(l =>
+            `<text x="${l.x.toFixed(1)}" y="${h}" text-anchor="middle" font-size="9" fill="#8a8fa8">${l.label}</text>`
+        ).join('');
+
+        return `<svg width="${w}" height="${h}" style="display:block">` +
+            `<path d="${area}" fill="rgba(52,152,219,0.15)"/>` +
+            `<path d="${line}" fill="none" stroke="#3498db" stroke-width="1.5"/>` +
+            labelsSvg +
+            `<text x="${w / 2}" y="${pt - 1}" text-anchor="middle" font-size="9" fill="#8a8fa8">% of all articles</text>` +
+            `</svg>`;
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         if (document.getElementById('bubble-svg')) {
             initBubbleMap().catch(err => {

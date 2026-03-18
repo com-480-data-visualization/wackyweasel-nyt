@@ -388,6 +388,7 @@ section h2 {
 
 #bubble-tooltip {
     z-index: 200;
+    max-width: 240px;
 }
 
 /* Word Count by Region Map */

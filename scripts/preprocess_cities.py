@@ -393,17 +393,29 @@ def main():
 
     conn = sqlite3.connect(str(DB_FILE))
     cursor = conn.execute(
-        "SELECT keywords FROM articles "
+        "SELECT keywords, pub_date FROM articles "
         "WHERE keywords IS NOT NULL AND keywords != ''"
     )
 
-    # Count unique articles per canonical city
+    YEARS = list(range(2000, 2024))
+    year_set = set(YEARS)
+
+    # Count unique articles per canonical city, total and by year
     city_counts = Counter()
+    city_year_counts = {}  # city -> {year: count}
     total = 0
     matched = 0
 
-    for (keywords_str,) in cursor:
+    for (keywords_str, pub_date) in cursor:
         total += 1
+
+        # Extract year
+        year = None
+        if pub_date:
+            try:
+                year = int(pub_date[:4])
+            except (ValueError, TypeError):
+                pass
 
         try:
             keywords = json.loads(keywords_str.replace("'", '"'))
@@ -425,11 +437,27 @@ def main():
             matched += 1
             for city in article_cities:
                 city_counts[city] += 1
+                if year and year in year_set:
+                    if city not in city_year_counts:
+                        city_year_counts[city] = Counter()
+                    city_year_counts[city][year] += 1
 
         if total % 500000 == 0:
             print(f"  Processed {total:,} articles...", flush=True)
 
     conn.close()
+
+    # Get total articles per year for normalization
+    conn2 = sqlite3.connect(str(DB_FILE))
+    total_by_year = {}
+    for (y, cnt) in conn2.execute(
+        "SELECT CAST(SUBSTR(pub_date, 1, 4) AS INTEGER) as yr, COUNT(*) "
+        "FROM articles WHERE pub_date IS NOT NULL "
+        "GROUP BY yr"
+    ):
+        if y in year_set:
+            total_by_year[y] = cnt
+    conn2.close()
 
     print(f"\nTotal articles scanned: {total:,}")
     print(f"Articles with US city mentions: {matched:,}")
@@ -447,17 +475,26 @@ def main():
     for city_name, count in city_counts.most_common():
         if city_name in city_info:
             state, lat, lon = city_info[city_name]
+            yc = city_year_counts.get(city_name, {})
+            by_year = [yc.get(y, 0) for y in YEARS]
+            # Percentage of total articles that year
+            pct_by_year = [
+                round(yc.get(y, 0) / total_by_year[y] * 100, 3) if total_by_year.get(y, 0) > 0 else 0
+                for y in YEARS
+            ]
             output.append({
                 "city": city_name,
                 "state": state,
                 "lat": lat,
                 "lon": lon,
-                "count": count
+                "count": count,
+                "by_year": by_year,
+                "pct_by_year": pct_by_year
             })
 
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_FILE, 'w') as f:
-        json.dump(output, f, indent=2)
+        json.dump({"years": YEARS, "cities": output}, f)
 
     print(f"\nOutput: {OUTPUT_FILE}")
     print(f"\nTop 30 US cities by mention count:")
