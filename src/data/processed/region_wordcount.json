@@ -1,0 +1,74 @@
+{
+  "regions": [
+    {
+      "name": "North America",
+      "avg_word_count": 860.8,
+      "article_count": 48651,
+      "lon": -100,
+      "lat": 45
+    },
+    {
+      "name": "Central America & Caribbean",
+      "avg_word_count": 859.8,
+      "article_count": 10241,
+      "lon": -78,
+      "lat": 18
+    },
+    {
+      "name": "South America",
+      "avg_word_count": 818.2,
+      "article_count": 12915,
+      "lon": -58,
+      "lat": -18
+    },
+    {
+      "name": "Europe",
+      "avg_word_count": 824.1,
+      "article_count": 89537,
+      "lon": 15,
+      "lat": 52
+    },
+    {
+      "name": "Middle East",
+      "avg_word_count": 817.3,
+      "article_count": 67568,
+      "lon": 44,
+      "lat": 30
+    },
+    {
+      "name": "North Africa",
+      "avg_word_count": 837.5,
+      "article_count": 9835,
+      "lon": 15,
+      "lat": 28
+    },
+    {
+      "name": "Sub-Saharan Africa",
+      "avg_word_count": 800.0,
+      "article_count": 13691,
+      "lon": 22,
+      "lat": -2
+    },
+    {
+      "name": "South & Central Asia",
+      "avg_word_count": 790.2,
+      "article_count": 30737,
+      "lon": 72,
+      "lat": 28
+    },
+    {
+      "name": "East & Southeast Asia",
+      "avg_word_count": 815.7,
+      "article_count": 53601,
+      "lon": 115,
+      "lat": 25
+    },
+    {
+      "name": "Oceania",
+      "avg_word_count": 825.5,
+      "article_count": 6294,
+      "lon": 145,
+      "lat": -25
+    }
+  ]
+}

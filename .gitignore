@@ -9,6 +9,8 @@
 !MILESTONE1.pdf
 !MILESTONE2.pdf
 !eda_article_counts.png
+!images/
+!images/*.png
 !index.html
 
 # Whitelist: source
@@ -17,6 +19,9 @@
 !src/css/*.css
 !src/js/
 !src/js/*.js
+!src/data/
+!src/data/processed/
+!src/data/processed/*.json
 
 # Whitelist: scripts
 !scripts/
