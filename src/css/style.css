@@ -15,6 +15,7 @@
 
 html {
     scroll-snap-type: y mandatory;
+    overflow: hidden;
 }
 
 body {
@@ -22,21 +23,48 @@ body {
     line-height: 1.6;
     color: var(--text);
     background: var(--bg);
+    overflow: hidden;
+    height: 100dvh;
 }
 
 /* Header */
 header {
-    background: linear-gradient(135deg, #0f1527, #1a2a4a);
+    background: var(--card-bg);
     color: white;
     padding: 2.5rem 2rem;
     text-align: center;
-    position: relative;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100dvh;
     overflow: hidden;
-    scroll-snap-align: start;
-    min-height: 100dvh;
     display: flex;
     flex-direction: column;
     justify-content: center;
+    z-index: 100;
+    transition: opacity 0.6s ease;
+}
+
+/* Exit page */
+#exit-page {
+    background: rgba(22, 33, 62, 0.75);
+    color: white;
+    padding: 2.5rem 2rem;
+    text-align: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.6s ease;
 }
 
 header h1 { font-size: 2.5rem; margin-bottom: 0.3rem; }
@@ -50,7 +78,7 @@ header h1 { font-size: 2.5rem; margin-bottom: 0.3rem; }
 #bg-map {
     position: fixed;
     opacity: 0;
-    z-index: 9999;
+    z-index: 101;
     pointer-events: none;
     transition: opacity 0.5s;
 }
@@ -66,7 +94,8 @@ section {
     border-radius: 0;
     box-shadow: none;
     scroll-snap-align: start;
-    min-height: 100dvh;
+    height: 100dvh;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -128,20 +157,20 @@ section h2 {
 
 .country {
     stroke: rgba(52, 152, 219, 0.3);
-    stroke-width: 0.5;
+    stroke-width: 0.3;
     cursor: pointer;
 }
 
 .country-hover {
     stroke: #e0e0e0;
-    stroke-width: 1.5;
+    stroke-width: 0.8;
     opacity: 0.85;
 }
 
 .country-border {
     fill: none;
     stroke: rgba(52, 152, 219, 0.3);
-    stroke-width: 0.5;
+    stroke-width: 0.3;
     pointer-events: none;
 }
 
@@ -292,30 +321,7 @@ section h2 {
     text-align: right;
 }
 
-/* US City Bubble Map */
-#bubble-map-visualization {
-    position: relative;
-}
-
-#bubble-description {
-    color: var(--text-light);
-    font-size: 0.95rem;
-    text-align: center;
-    margin-bottom: 1rem;
-}
-
-#bubble-container {
-    display: flex;
-    justify-content: center;
-}
-
-#bubble-svg {
-    width: 100%;
-    max-width: 800px;
-    height: auto;
-    aspect-ratio: 960 / 600;
-}
-
+/* US City Bubble Map (inside map-stack) */
 .us-state {
     fill: #2a3555;
     stroke: rgba(52, 152, 219, 0.3);
@@ -456,17 +462,6 @@ section h2 {
 
 .bar-rect {
     opacity: 0.85;
-}
-
-/* Footer */
-footer {
-    text-align: center;
-    padding: 1.5rem;
-    background: #0f1527;
-    color: #8a8fa8;
-    margin-top: 0;
-    font-size: 0.9rem;
-    scroll-snap-align: end;
 }
 
 /* Typewriter effect */

@@ -50,16 +50,24 @@
     };
 
     // Mode definitions
-    const MODES = ['cooccurrence', 'trend', 'year'];
+    const MODES = ['title', 'cooccurrence', 'trend', 'year', 'us', 'us-ny', 'us-la', 'us-sf', 'exit'];
     const MODE_TITLES = {
         cooccurrence: 'Which Countries Share Headlines?',
         trend: 'Who Makes the Front Page?',
-        year: 'Who Makes the Front Page?'
+        year: 'Who Makes the Front Page?',
+        us: 'Where in the US Does the NYT Report From?',
+        'us-ny': 'New York City Metro',
+        'us-la': 'Los Angeles Metro',
+        'us-sf': 'San Francisco Bay Area'
     };
     const MODE_DESCRIPTIONS = {
         cooccurrence: 'Countries that appear together in NYT articles. Hover over a country to see its connections.',
         trend: 'How NYT front page country mentions shifted over 25 years. Arrows show the trend.',
-        year: 'Front page mentions by year. Use the slider or arrow keys to browse.'
+        year: 'Front page mentions by year. Use the slider or arrow keys to browse.',
+        us: 'City-level dateline mentions across 2.2M articles. Bigger bubble, more coverage.',
+        'us-ny': '120,000+ articles mention New York City alone.',
+        'us-la': 'Hollywood, Silicon Beach, and the West Coast news hub.',
+        'us-sf': 'The Bay Area - tech capital and cultural hub.'
     };
 
     // Front page constants
@@ -75,13 +83,15 @@
     const nearby = window.Typewriter.nearby;
 
     // State
-    let currentMode = 'cooccurrence';
+    let currentMode = 'title';
     let currentYear = 2000;
     let svg, projection, pathGen;
     let centroids = {};
     let geoCentroids = {};  // lon/lat centroids for arc interpolation (cooccurrence)
     let headlineTimer = null;
     let isVisible = false;
+    let US_VIEWBOX = '';
+    const METRO_VIEWBOXES = {};
 
     // Co-occurrence state
     let coocData = null;
@@ -98,7 +108,11 @@
     let lengthScale;
 
     // SVG layer groups
-    let arcsGroup, arrowGroup, legend;
+    let arcsGroup, arrowGroup, legend, bubblesGroup, statesGroup;
+
+    // US city data
+    let cityData = null;
+    let cityRadiusScale, cityColorScale;
 
     // Tooltip
     let tooltip;
@@ -114,17 +128,24 @@
         return denom === 0 ? 0 : (n * sumXY - sumX * sumY) / denom;
     }
 
+    const CITIES_URL = 'src/data/processed/us_city_mentions.json';
+    const US_TOPO_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json';
+
     async function init() {
-        const [topo, mentions, cooc, sections, hdl] = await Promise.all([
+        const [topo, mentions, cooc, sections, hdl, citiesRaw, usTopo] = await Promise.all([
             d3.json(TOPO_URL),
             d3.json(MENTIONS_URL),
             d3.json(COOC_URL).catch(() => null),
             d3.json(SECTIONS_URL),
-            d3.json(HEADLINES_URL)
+            d3.json(HEADLINES_URL),
+            d3.json(CITIES_URL),
+            d3.json(US_TOPO_URL)
         ]);
 
         coocData = cooc;
         headlines = hdl;
+        const cities = Array.isArray(citiesRaw) ? citiesRaw : citiesRaw.cities;
+        const cityYears = Array.isArray(citiesRaw) ? null : citiesRaw.years;
 
         // Build lookups
         mentions.countries.forEach(c => { mentionLookup[c.id] = c; });
@@ -145,6 +166,26 @@
         const topoCountries = topojson.feature(topo, topo.objects.countries).features;
         const mesh = topojson.mesh(topo, topo.objects.countries, (a, b) => a !== b);
 
+
+        // Compute US bounding box for zoom mode
+        const usFeature = topoCountries.find(f => f.id === '840');
+        const usBounds = pathGen.bounds(usFeature);
+        const usPad = 10;
+        const usW = usBounds[1][0] - usBounds[0][0] + usPad * 2;
+        const usH = usBounds[1][1] - usBounds[0][1] + usPad * 2;
+        // Match the SVG aspect ratio so it doesn't distort
+        const svgAspect = MAP_WIDTH / MAP_HEIGHT;
+        let vbW, vbH;
+        if (usW / usH > svgAspect) {
+            vbW = usW;
+            vbH = usW / svgAspect;
+        } else {
+            vbH = usH;
+            vbW = usH * svgAspect;
+        }
+        const usCx = (usBounds[0][0] + usBounds[1][0]) / 2;
+        const usCy = (usBounds[0][1] + usBounds[1][1]) / 2;
+        US_VIEWBOX = `${usCx - vbW / 2} ${usCy - vbH / 2} ${vbW} ${vbH}`;
 
         // Compute centroids (both pixel and geo)
         topoCountries.forEach(f => {
@@ -230,6 +271,64 @@
         // Layer groups for each mode's overlay
         arcsGroup = svg.append('g').attr('class', 'arcs-group').attr('pointer-events', 'none');
         arrowGroup = svg.append('g').attr('class', 'trend-arrows');
+        // US state borders (hidden, shown on US zoom)
+        statesGroup = svg.append('g').attr('class', 'us-states-group').attr('opacity', 0);
+        const usStates = topojson.feature(usTopo, usTopo.objects.states).features;
+        statesGroup.selectAll('path')
+            .data(usStates)
+            .join('path')
+            .attr('d', pathGen)
+            .attr('fill', 'none')
+            .attr('stroke', 'rgba(52, 152, 219, 0.4)')
+            .attr('stroke-width', 0.3)
+            .attr('pointer-events', 'none');
+
+        bubblesGroup = svg.append('g').attr('class', 'city-bubbles').attr('opacity', 0);
+
+        // Project cities onto world map and draw bubbles
+        cityData = cities
+            .map(c => {
+                const coords = projection([c.lon, c.lat]);
+                return coords ? { ...c, x: coords[0], y: coords[1], _years: cityYears } : null;
+            })
+            .filter(Boolean);
+
+        const countExtent = d3.extent(cityData, d => d.count);
+        cityRadiusScale = d3.scaleSqrt().domain(countExtent).range([2.5, 25]);
+        cityColorScale = d3.scaleSequentialLog(d3.interpolateYlOrRd).domain(countExtent);
+
+        cityData.sort((a, b) => b.count - a.count);
+
+        // Compute metro zoom viewboxes from projected city coordinates
+        const metroRegions = {
+            'us-ny': { lat: 40.7128, lon: -74.0060, radius: 8 },
+            'us-la': { lat: 34.0522, lon: -118.2437, radius: 8 },
+            'us-sf': { lat: 37.7749, lon: -122.4194, radius: 8 }
+        };
+        for (const [key, metro] of Object.entries(metroRegions)) {
+            const center = projection([metro.lon, metro.lat]);
+            if (center) {
+                const r = metro.radius;
+                const vbW = r * 2 * (MAP_WIDTH / MAP_HEIGHT > 1 ? MAP_WIDTH / MAP_HEIGHT : 1);
+                const vbH = vbW / (MAP_WIDTH / MAP_HEIGHT);
+                METRO_VIEWBOXES[key] = `${center[0] - vbW / 2} ${center[1] - vbH / 2} ${vbW} ${vbH}`;
+            }
+        }
+
+        bubblesGroup.selectAll('circle')
+            .data(cityData)
+            .join('circle')
+            .attr('class', 'city-bubble')
+            .attr('cx', d => d.x)
+            .attr('cy', d => d.y)
+            .attr('r', 0)
+            .attr('data-r', d => cityRadiusScale(d.count))
+            .attr('fill', d => cityColorScale(d.count))
+            .attr('stroke', 'none')
+            .attr('opacity', 0)
+            .on('mouseover', handleBubbleOver)
+            .on('mousemove', handleMouseMove)
+            .on('mouseout', handleBubbleOut);
 
         // Legend (for trend mode)
         legend = svg.append('g')
@@ -252,8 +351,8 @@
             .attr('x', 28).attr('y', 35).text('Decreasing coverage')
             .attr('font-size', '11px').attr('fill', '#8a8fa8');
 
-        // Set initial mode
-        activateMode('cooccurrence', false);
+        // Set initial mode (title overlay is shown by default)
+        activateMode('title', false);
 
         // Keyboard navigation
         document.addEventListener('keydown', handleKeydown);
@@ -263,8 +362,10 @@
         // fight us, then re-enable it at the edges so normal snapping takes over.
         const worldSection = document.getElementById('world-visualization');
         let wheelCooldown = false;
-        worldSection.addEventListener('wheel', (e) => {
-            if (!isVisible || wheelCooldown) return;
+        // Listen on both section and header (header overlay captures events when visible)
+        const headerEl = document.querySelector('header');
+        function handleWheel(e) {
+            if ((!isVisible && currentMode !== 'title' && currentMode !== 'exit') || wheelCooldown) return;
             const idx = MODES.indexOf(currentMode);
 
             if (e.deltaY > 0 && idx < MODES.length - 1) {
@@ -295,7 +396,11 @@
                 // At edge — make sure snap is re-enabled for normal scrolling
                 document.documentElement.style.scrollSnapType = '';
             }
-        }, { passive: false });
+        }
+        worldSection.addEventListener('wheel', handleWheel, { passive: false });
+        if (headerEl) headerEl.addEventListener('wheel', handleWheel, { passive: false });
+        const exitEl = document.getElementById('exit-page');
+        if (exitEl) exitEl.addEventListener('wheel', handleWheel, { passive: false });
 
         // Year slider
         const yearSlider = document.getElementById('world-year-slider');
@@ -320,15 +425,19 @@
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     isVisible = true;
+                    // Skip scroll-in effects while title overlay is showing
+                    if (currentMode === 'title') return;
                     // Type the title on each scroll-in
                     const h2 = document.querySelector('#world-visualization h2');
                     if (h2) typewriteTitle(h2, MODE_TITLES[currentMode]);
                     if (currentMode === 'trend') drawTrendArrows(true);
                     else if (currentMode === 'year') drawYearHeatmap(currentYear, true);
+                    else if (currentMode === 'us' || currentMode.startsWith('us-')) showBubbles();
                 } else {
                     isVisible = false;
                     collapseArrows();
                     clearCooccurrence();
+                    hideBubbles(false);
                     if (headlineTimer) { clearTimeout(headlineTimer); headlineTimer = null; }
                     if (activeTitle) { activeTitle.cancel(); activeTitle = null; }
                     // Clear title and re-enable scroll-snap
@@ -345,6 +454,73 @@
     // ─── Mode switching ───
 
     function activateMode(mode, animate) {
+        // Handle title overlay
+        const header = document.querySelector('header');
+        const bgMap = document.getElementById('bg-map');
+        const exitPage = document.getElementById('exit-page');
+        if (mode === 'title') {
+            currentMode = mode;
+            if (header) { header.style.opacity = '1'; header.style.pointerEvents = ''; }
+            if (bgMap) bgMap.style.opacity = '0.65';
+            if (exitPage) { exitPage.style.opacity = '0'; exitPage.style.pointerEvents = 'none'; }
+            document.querySelectorAll('.mode-dot').forEach(d => d.classList.toggle('active', d.dataset.mode === mode));
+            return;
+        }
+        if (mode === 'exit') {
+            currentMode = mode;
+            if (header) { header.style.opacity = '0'; header.style.pointerEvents = 'none'; }
+            if (bgMap) bgMap.style.opacity = '0';
+
+            // Hide UI immediately
+            const h2 = document.querySelector('#world-visualization h2');
+            if (h2) h2.style.opacity = '0';
+            const desc = document.getElementById('world-description');
+            if (desc) desc.style.opacity = '0';
+            const yearControls = document.getElementById('world-year-controls');
+            if (yearControls) yearControls.style.opacity = '0';
+            const dots = document.querySelector('.mode-dots');
+            if (dots) dots.style.opacity = '0';
+            tooltip.style('opacity', 0);
+            hideBubbles(false, true);
+            statesGroup.transition().duration(600).attr('opacity', 0);
+            collapseArrows();
+            clearCooccurrence();
+
+            // Zoom out to full world
+            svg.transition().duration(1400).ease(d3.easeCubicInOut)
+                .attr('viewBox', `0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`);
+            svg.selectAll('.country')
+                .transition().duration(1400)
+                .attr('fill', 'transparent')
+                .attr('stroke', 'rgba(100, 180, 255, 1)')
+                .attr('stroke-width', 1);
+            svg.selectAll('.country-border')
+                .transition().duration(1400)
+                .attr('stroke', 'rgba(100, 180, 255, 1)')
+                .attr('stroke-width', 1);
+
+            // Fade in exit overlay after zoom completes
+            setTimeout(() => {
+                if (currentMode === 'exit' && exitPage) {
+                    exitPage.style.opacity = '1';
+                    exitPage.style.pointerEvents = '';
+                }
+            }, 1500);
+            document.querySelectorAll('.mode-dot').forEach(d => d.classList.toggle('active', d.dataset.mode === mode));
+            return;
+        }
+        // Hide both overlays
+        if (header) { header.style.opacity = '0'; header.style.pointerEvents = 'none'; }
+        if (bgMap) bgMap.style.opacity = '0';
+        if (exitPage) { exitPage.style.opacity = '0'; exitPage.style.pointerEvents = 'none'; }
+        // Restore UI elements hidden by exit mode
+        const h2Restore = document.querySelector('#world-visualization h2');
+        if (h2Restore) h2Restore.style.opacity = '';
+        const descRestore = document.getElementById('world-description');
+        if (descRestore) descRestore.style.opacity = '';
+        const dotsRestore = document.querySelector('.mode-dots');
+        if (dotsRestore) dotsRestore.style.opacity = '';
+
         // Clean up previous mode
         clearCooccurrence();
         collapseArrows();
@@ -381,16 +557,81 @@
             dot.classList.toggle('active', dot.dataset.mode === mode);
         });
 
-        // Draw the mode's content
-        if (mode === 'cooccurrence') {
-            // Just reset countries to base color, hover will trigger arcs
+        const isUSMode = mode === 'us' || mode.startsWith('us-');
+
+        if (isUSMode) {
+            // Reset country colors from heatmap
             resetCountryFills();
-        } else if (mode === 'trend') {
+            // Pick the right viewBox: full US or metro sub-zoom
+            const targetVB = METRO_VIEWBOXES[mode] || US_VIEWBOX;
+            const dur = animate ? 800 : 0;
+
+            // Compute scale factor: ratio of target viewBox width to full map width
+            const targetVBWidth = +targetVB.split(' ')[2];
+            const bubbleScale = targetVBWidth / MAP_WIDTH;
+
+            svg.transition().duration(dur).ease(d3.easeCubicInOut)
+                .attr('viewBox', targetVB);
+
+            statesGroup
+                .transition().delay(animate ? 200 : 0).duration(300)
+                .attr('opacity', 1);
+            const stateBorderW = 0.4 * bubbleScale;
+            statesGroup.selectAll('path')
+                .transition().duration(dur)
+                .attr('stroke-width', stateBorderW);
+            // On metro zoom, match country borders to state borders; on US zoom, keep thinner
+            // .country paths have their own stroke + .country-border mesh overlaps, so halve to avoid double thickness
+            const countryBorderW = mode.startsWith('us-') ? stateBorderW * 0.5 : Math.max(0.02, 0.1 * bubbleScale);
+            svg.selectAll('.country, .country-border')
+                .transition().duration(dur)
+                .attr('stroke-width', countryBorderW);
+            bubblesGroup
+                .transition().delay(animate ? 300 : 0).duration(300)
+                .attr('opacity', 1);
+
+            // Only animate bubbles popping in on first entry to US mode
+            if (mode === 'us' && animate) {
+                bubblesGroup.selectAll('.city-bubble')
+                    .attr('r', 0).attr('opacity', 0)
+                    .transition()
+                    .delay((d, i) => 400 + i * 8)
+                    .duration(400)
+                    .ease(d3.easeBackOut.overshoot(1.5))
+                    .attr('r', function () { return +d3.select(this).attr('data-r') * bubbleScale; })
+                    .attr('opacity', 0.75);
+            } else {
+                // Zoom transition (US full or metro sub-zoom): scale bubbles smoothly
+                bubblesGroup.selectAll('.city-bubble')
+                    .transition().duration(dur).ease(d3.easeCubicInOut)
+                    .attr('r', function () { return +d3.select(this).attr('data-r') * bubbleScale; })
+                    .attr('opacity', 0.75);
+            }
+        } else {
+            // Leaving US mode: zoom back out, hide bubbles
+            hideBubbles(animate);
+
             resetCountryFills();
-            if (isVisible) drawTrendArrows(animate);
-        } else if (mode === 'year') {
-            resetCountryFills();
-            if (isVisible) drawYearHeatmap(currentYear, animate);
+            if (mode === 'trend') {
+                if (isVisible) drawTrendArrows(animate);
+            } else if (mode === 'year') {
+                if (isVisible) drawYearHeatmap(currentYear, animate);
+            }
+        }
+    }
+
+    function hideBubbles(animate, skipViewBox) {
+        const dur = animate ? 600 : 0;
+        statesGroup.transition().duration(200).attr('opacity', 0);
+        bubblesGroup.transition().duration(200).attr('opacity', 0);
+        bubblesGroup.selectAll('.city-bubble')
+            .interrupt()
+            .attr('r', 0).attr('opacity', 0);
+        if (!skipViewBox) {
+            svg.transition().duration(dur).ease(d3.easeCubicInOut)
+                .attr('viewBox', `0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`);
+            // Reset border widths
+            svg.selectAll('.country, .country-border').transition().duration(dur).attr('stroke-width', 0.3);
         }
     }
 
@@ -450,16 +691,25 @@
     // ─── Mouse handlers (dispatch by mode) ───
 
     function handleMouseOver(event, d) {
+        if (currentMode === 'us' || currentMode.startsWith('us-')) return;
         const iso3 = NUMERIC_TO_ALPHA3[d.id] || d.id;
         d3.select(this).classed('country-hover', true);
 
+        const countryName = mentionLookup[iso3] ? mentionLookup[iso3].name : iso3;
+
         if (currentMode === 'cooccurrence') {
-            if (!coocData || !coocData[iso3]) return;
+            if (!coocData || !coocData[iso3]) {
+                tooltip.style('opacity', 1).html(`<strong>${countryName}</strong><br><span style="opacity:0.5">No co-occurrence data</span>`);
+                return;
+            }
             if (coocSelectedCountry === iso3) return;
             showConnections(iso3);
         } else if (currentMode === 'trend') {
             const t = trends.find(tr => tr.iso3 === iso3);
-            if (!t) return;
+            if (!t) {
+                tooltip.style('opacity', 1).html(`<strong>${countryName}</strong><br><span style="opacity:0.5">No front page data</span>`);
+                return;
+            }
             const dir = t.slope > 0 ? 'Increasing' : 'Decreasing';
             const color = t.slope > 0 ? COLOR_INCREASE : COLOR_DECREASE;
             tooltip.style('opacity', 1)
@@ -469,7 +719,10 @@
                     `(slope: ${t.slope.toFixed(2)}/yr)`);
         } else if (currentMode === 'year') {
             const t = trends.find(tr => tr.iso3 === iso3);
-            if (!t) return;
+            if (!t) {
+                tooltip.style('opacity', 1).html(`<strong>${countryName}</strong> (${currentYear})<br><span style="opacity:0.5">No front page data</span>`);
+                return;
+            }
             const yi = yearToIndex[currentYear];
             const val = yi !== undefined ? (t.values[YEARS.indexOf(currentYear)] || 0) : 0;
             const totalYear = Object.values(sectionLookup).reduce((sum, c) => {
@@ -514,6 +767,107 @@
         if (currentMode === 'cooccurrence') {
             clearCooccurrence();
         }
+    }
+
+    // ─── Bubble map mouse handlers ───
+
+    const SPARK_W = 260, SPARK_H = 85;
+    const SPARK_PAD = { top: 8, right: 10, bottom: 18, left: 32 };
+
+    function handleBubbleOver(event, d) {
+        d3.select(this).attr('opacity', 1).attr('stroke-width', 1);
+        tooltip.html(`<strong>${d.city}, ${d.state}</strong><br>${d.count.toLocaleString()} articles`)
+            .style('opacity', 1);
+        if (d.pct_by_year) {
+            const container = tooltip.append('div').style('margin-top', '6px');
+            buildSparkline(container, d.pct_by_year, d._years);
+        }
+    }
+
+    function handleBubbleOut() {
+        d3.select(this).attr('opacity', 0.75).attr('stroke-width', 0.3);
+        tooltip.style('opacity', 0);
+    }
+
+    function buildSparkline(container, pctValues, years) {
+        const w = SPARK_W, h = SPARK_H;
+        const margin = SPARK_PAD;
+
+        const sparkSvg = container.append('svg')
+            .attr('width', w).attr('height', h)
+            .style('display', 'block');
+
+        const iw = w - margin.left - margin.right;
+        const ih = h - margin.top - margin.bottom;
+
+        const g = sparkSvg.append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
+
+        const x = d3.scaleLinear()
+            .domain([0, pctValues.length - 1])
+            .range([0, iw]);
+
+        const y = d3.scaleLinear()
+            .domain([0, d3.max(pctValues) || 0.001])
+            .range([ih, 0]);
+
+        const lineGen = d3.line()
+            .x((d, i) => x(i))
+            .y(d => y(d));
+
+        const areaGen = d3.area()
+            .x((d, i) => x(i))
+            .y0(ih)
+            .y1(d => y(d));
+
+        // Y-axis gridlines + labels
+        y.ticks(3).forEach(v => {
+            g.append('line')
+                .attr('x1', 0).attr('x2', iw)
+                .attr('y1', y(v)).attr('y2', y(v))
+                .attr('stroke', '#2a3555').attr('stroke-width', 0.5);
+            const label = v < 1 ? v.toFixed(2) : v < 10 ? v.toFixed(1) : Math.round(v);
+            g.append('text')
+                .attr('x', -4).attr('y', y(v) + 3)
+                .attr('text-anchor', 'end')
+                .attr('font-size', 9).attr('fill', '#6a7088')
+                .text(label + '%');
+        });
+
+        // X-axis labels
+        if (years) {
+            [0, Math.floor((years.length - 1) / 2), years.length - 1].forEach(i => {
+                g.append('text')
+                    .attr('x', x(i)).attr('y', ih + 13)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', 9).attr('fill', '#6a7088')
+                    .text(years[i]);
+            });
+        }
+
+        // Area fill (animated)
+        g.append('path')
+            .datum(pctValues)
+            .attr('d', areaGen)
+            .attr('fill', 'rgba(52,152,219,0.2)')
+            .attr('opacity', 0)
+            .transition().delay(800).duration(300)
+            .attr('opacity', 1);
+
+        // Line (animated draw)
+        const linePath = g.append('path')
+            .datum(pctValues)
+            .attr('d', lineGen)
+            .attr('fill', 'none')
+            .attr('stroke', '#3498db')
+            .attr('stroke-width', 2);
+
+        const totalLen = linePath.node().getTotalLength();
+        linePath
+            .attr('stroke-dasharray', totalLen)
+            .attr('stroke-dashoffset', totalLen)
+            .transition().duration(1000).ease(d3.easeLinear)
+            .attr('stroke-dashoffset', 0);
     }
 
     // ─── Typewriter for headline tooltips ───

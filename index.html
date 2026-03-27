@@ -46,20 +46,16 @@
             </div>
             <div id="connection-panel" style="display:none;"></div>
             <div class="mode-dots">
-                <span class="mode-dot active" data-mode="cooccurrence"></span>
+                <span class="mode-dot active" data-mode="title"></span>
+                <span class="mode-dot" data-mode="cooccurrence"></span>
                 <span class="mode-dot" data-mode="trend"></span>
                 <span class="mode-dot" data-mode="year"></span>
+                <span class="mode-dot" data-mode="us"></span>
+                <span class="mode-dot" data-mode="us-ny"></span>
+                <span class="mode-dot" data-mode="us-la"></span>
+                <span class="mode-dot" data-mode="us-sf"></span>
+                <span class="mode-dot" data-mode="exit"></span>
             </div>
-        </section>
-
-        <!-- US City Bubble Map -->
-        <section id="bubble-map-visualization">
-            <h2>Where in the US Does the NYT Report From?</h2>
-            <p id="bubble-description">City-level dateline mentions across 2.2M articles. Bigger bubble, more coverage.</p>
-            <div id="bubble-container">
-                <svg id="bubble-svg"></svg>
-            </div>
-            <div id="bubble-tooltip" class="tooltip"></div>
         </section>
 
         <!-- Word Count by Region (commented out for now)
@@ -74,15 +70,18 @@
         -->
     </main>
 
-    <!-- Footer -->
-    <footer>
-        <p>&copy; 2025 EPFL - COM-480 Data Visualization</p>
-    </footer>
+    <!-- Exit overlay -->
+    <div id="exit-page">
+        <div class="header-text">
+            <h1>COM-480 Data Visualization</h1>
+            <p class="subtitle">EPFL - 2026</p>
+            <p class="subtitle">Florian Hitz</p>
+        </div>
+    </div>
 
     <!-- Custom JavaScript -->
     <script src="src/js/typewriter.js"></script>
     <script src="src/js/worldmap.js"></script>
-    <script src="src/js/bubblemap.js"></script>
     <!-- <script src="src/js/wordcount.js"></script> -->
 
     <!-- Typewriter effect on section titles + descriptions -->
@@ -144,6 +143,7 @@
 
     })();
     </script>
+
 
     <!-- Background: continuous dot map with country labels -->
     <script>

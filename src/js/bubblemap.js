@@ -88,6 +88,7 @@
             .attr('cx', d => d.x)
             .attr('cy', d => d.y)
             .attr('r', 0)
+            .attr('data-r', d => radiusScale(d.count))
             .attr('fill', d => colorScale(d.count))
             .attr('stroke', '#1e2a45')
             .attr('stroke-width', 0.5)
@@ -121,23 +122,7 @@
                 tooltip.style('opacity', 0);
             });
 
-        // Animate on scroll
-        const observer = new IntersectionObserver(entries => {
-            entries.forEach(entry => {
-                if (!entry.isIntersecting) return;
-                observer.disconnect();
-
-                svg.selectAll('.city-bubble')
-                    .transition()
-                    .delay((d, i) => i * 12)
-                    .duration(400)
-                    .ease(d3.easeBackOut.overshoot(1.5))
-                    .attr('r', d => radiusScale(d.count))
-                    .attr('opacity', 0.75);
-            });
-        }, { threshold: 0.15 });
-
-        observer.observe(document.getElementById('bubble-map-visualization'));
+        // Animation is triggered by worldmap.js when switching to US mode
     }
 
     function buildSparkline(pctValues, years) {
@@ -211,9 +196,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         if (document.getElementById('bubble-svg')) {
-            initBubbleMap().catch(err => {
-                console.error('Failed to initialize bubble map:', err);
-            });
+            initBubbleMap().catch(err => console.error('Failed to initialize bubble map:', err));
         }
     });
 })();

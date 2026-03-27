@@ -276,6 +276,13 @@ US_CITIES = {
     "Park Avenue (NYC)": ("New York City", "NY", 40.7128, -74.0060),
     "Bryant Park (NYC)": ("New York City", "NY", 40.7128, -74.0060),
 
+    # Alaska
+    "Juneau (Alaska)": ("Juneau", "AK", 58.3005, -134.4197),
+    "Fairbanks (Alaska)": ("Fairbanks", "AK", 64.8378, -147.7164),
+    "Wasilla (Alaska)": ("Wasilla", "AK", 61.5814, -149.4394),
+    "Anchorage": ("Anchorage", "AK", 61.2181, -149.9003),
+    "Nome (Alaska)": ("Nome", "AK", 64.5011, -165.4064),
+
     # Hawaii
     "Honolulu (Hawaii)": ("Honolulu", "HI", 21.3069, -157.8583),
     "Pearl Harbor (Hawaii)": ("Honolulu", "HI", 21.3069, -157.8583),
