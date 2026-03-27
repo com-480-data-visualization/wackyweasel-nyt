@@ -102,25 +102,24 @@ section h2 {
     z-index: 100;
 }
 
-/* World Map */
-#map-visualization {
+/* Unified World Map */
+#world-visualization {
     position: relative;
 }
 
-#map-description {
+#world-description {
     color: var(--text-light);
     font-size: 0.95rem;
     text-align: center;
     margin-bottom: 1rem;
 }
 
-/* Trend Map */
-#map-container {
+#world-container {
     display: flex;
     justify-content: center;
 }
 
-#map-svg {
+#world-svg {
     width: 100%;
     max-width: 1200px;
     height: auto;
@@ -146,112 +145,47 @@ section h2 {
     pointer-events: none;
 }
 
-#map-controls {
+#world-year-controls {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 20px;
-    margin-bottom: 1rem;
-}
-
-#map-mode-toggle {
-    display: flex;
-    gap: 0;
-}
-
-.map-mode-btn {
-    background: #1e2a45;
-    color: var(--text);
-    border: 1px solid #2a3555;
-    padding: 6px 18px;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: background 0.2s, color 0.2s, border-color 0.2s;
-}
-
-.map-mode-btn:first-child {
-    border-radius: var(--radius) 0 0 var(--radius);
-}
-
-.map-mode-btn:last-child {
-    border-radius: 0 var(--radius) var(--radius) 0;
-    border-left: none;
-}
-
-.map-mode-btn.active {
-    background: var(--blue);
-    color: white;
-    border-color: var(--blue);
-}
-
-.map-mode-btn:hover:not(.active) {
-    background: #253552;
-}
-
-#map-year-controls {
-    display: flex;
-    align-items: center;
     gap: 10px;
+    margin-bottom: 1rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
 }
 
-#map-year-slider {
+#world-year-slider {
     width: 400px;
     max-width: 50vw;
     accent-color: var(--blue);
 }
 
-#map-year-label {
+#world-year-label {
     font-size: 1.3rem;
     font-weight: 700;
     color: var(--primary);
     min-width: 50px;
 }
 
-#map-tooltip {
+#world-tooltip {
     z-index: 200;
     max-width: 320px;
 }
 
-#map-tooltip .headline-line {
+#world-tooltip .headline-line {
     border-top: 1px solid #3a4565;
     margin: 6px 0;
 }
 
-#map-tooltip .headline-text {
+#world-tooltip .headline-text {
     display: block;
     font-size: 12px;
     color: #c8cdd8;
     font-style: italic;
     line-height: 1.4;
     min-height: 1.4em;
-}
-
-/* Interactive Co-occurrence Map */
-#cooc-visualization {
-    position: relative;
-}
-
-#cooc-description {
-    color: var(--text-light);
-    font-size: 0.95rem;
-    text-align: center;
-    margin-bottom: 1rem;
-}
-
-#cooc-container {
-    display: flex;
-    justify-content: center;
-}
-
-#cooc-svg {
-    width: 100%;
-    max-width: 1200px;
-    height: auto;
-    aspect-ratio: 960 / 500;
-}
-
-#cooc-tooltip {
-    z-index: 200;
 }
 
 /* Connection arcs */
@@ -263,6 +197,26 @@ section h2 {
 .country-selected {
     stroke: #e0e0e0 !important;
     stroke-width: 2 !important;
+}
+
+/* Mode indicator dots */
+.mode-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.mode-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #2a3555;
+    transition: background 0.3s;
+}
+
+.mode-dot.active {
+    background: var(--blue);
 }
 
 /* Connection info panel */

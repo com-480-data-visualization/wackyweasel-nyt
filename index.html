@@ -33,35 +33,23 @@
 
     <!-- Main Content -->
     <main>
-        <!-- Interactive Co-occurrence Map -->
-        <section id="cooc-visualization">
-            <h2>Which Countries Share Headlines?</h2>
-            <p id="cooc-description">Countries that appear together in NYT articles. Hover over a country to see its connections.</p>
-            <div id="cooc-container">
-                <svg id="cooc-svg"></svg>
+        <!-- Unified World Map: Co-occurrence / Trend / Year modes -->
+        <section id="world-visualization">
+            <h2 data-managed="true">Which Countries Share Headlines?</h2>
+            <p id="world-description">Countries that appear together in NYT articles. Hover over a country to see its connections.</p>
+            <div id="world-year-controls">
+                <input type="range" id="world-year-slider" min="2000" max="2023" value="2000">
+                <span id="world-year-label">2000</span>
             </div>
-            <div id="cooc-tooltip" class="tooltip"></div>
+            <div id="world-container">
+                <svg id="world-svg"></svg>
+            </div>
             <div id="connection-panel" style="display:none;"></div>
-        </section>
-
-        <!-- World Map: Front Page Coverage Trend -->
-        <section id="map-visualization">
-            <h2>Who Makes the Front Page?</h2>
-            <p id="map-description">How NYT front page country mentions shifted over 25 years. Arrows show the trend.</p>
-            <div id="map-controls">
-                <div id="map-mode-toggle">
-                    <button class="map-mode-btn active" data-mode="trend">Trend</button>
-                    <button class="map-mode-btn" data-mode="year">By Year</button>
-                </div>
-                <div id="map-year-controls" style="display:none">
-                    <input type="range" id="map-year-slider" min="2000" max="2023" value="2000">
-                    <span id="map-year-label">2000</span>
-                </div>
+            <div class="mode-dots">
+                <span class="mode-dot active" data-mode="cooccurrence"></span>
+                <span class="mode-dot" data-mode="trend"></span>
+                <span class="mode-dot" data-mode="year"></span>
             </div>
-            <div id="map-container">
-                <svg id="map-svg"></svg>
-            </div>
-            <div id="map-tooltip" class="tooltip"></div>
         </section>
 
         <!-- US City Bubble Map -->
@@ -92,65 +80,15 @@
     </footer>
 
     <!-- Custom JavaScript -->
-    <script src="src/js/map.js"></script>
-    <script src="src/js/cooccurrence.js"></script>
+    <script src="src/js/typewriter.js"></script>
+    <script src="src/js/worldmap.js"></script>
     <script src="src/js/bubblemap.js"></script>
     <!-- <script src="src/js/wordcount.js"></script> -->
 
     <!-- Typewriter effect on section titles + descriptions -->
     <script>
     (function() {
-        // Nearby keys for realistic typos
-        const nearby = {
-            a:'sq',b:'vn',c:'xv',d:'sf',e:'wr',f:'dg',g:'fh',h:'gj',i:'uo',j:'hk',
-            k:'jl',l:'k',m:'n',n:'bm',o:'ip',p:'o',q:'w',r:'et',s:'ad',t:'ry',
-            u:'yi',v:'cb',w:'qe',x:'zc',y:'tu',z:'x'
-        };
-
-        function typewrite(el, text, speed, typoChance) {
-            typoChance = typoChance || 0;
-            return new Promise(resolve => {
-                el.classList.add('typing');
-                el.textContent = '';
-                const cursor = document.createElement('span');
-                cursor.className = 'typewriter-cursor';
-                cursor.innerHTML = '&nbsp;';
-                el.appendChild(cursor);
-
-                let i = 0;
-                function tick() {
-                    if (i < text.length) {
-                        // Maybe make a typo
-                        const ch = text[i];
-                        const keys = nearby[ch.toLowerCase()];
-                        if (typoChance > 0 && keys && Math.random() < typoChance) {
-                            const wrong = keys[Math.floor(Math.random() * keys.length)];
-                            el.insertBefore(document.createTextNode(wrong), cursor);
-                            setTimeout(() => {
-                                // Remove the wrong character
-                                cursor.previousSibling.remove();
-                                setTimeout(() => {
-                                    // Type the correct one
-                                    el.insertBefore(document.createTextNode(ch), cursor);
-                                    i++;
-                                    setTimeout(tick, speed);
-                                }, speed);
-                            }, speed * 3);
-                        } else {
-                            el.insertBefore(document.createTextNode(ch), cursor);
-                            i++;
-                            setTimeout(tick, speed);
-                        }
-                    } else {
-                        setTimeout(() => {
-                            cursor.style.opacity = '0';
-                            resolve();
-                        }, 400);
-                    }
-                }
-                tick();
-            });
-        }
+        const tw = window.Typewriter.typewrite;
 
         // Header typewriter on load
         const h1 = document.querySelector('header h1');
@@ -167,9 +105,9 @@
                 el.textContent = '';
                 el.classList.add('typewriter');
             });
-            typewrite(h1, h1Text, 80, 0.08).then(async () => {
+            tw(h1, h1Text, 80, 0.08).then(async () => {
                 for (const s of subData) {
-                    await typewrite(s.el, s.text, 45, 0.05);
+                    await tw(s.el, s.text, 45, 0.05);
                 }
             });
         }
@@ -181,14 +119,11 @@
         const observer = new IntersectionObserver(entries => {
             entries.forEach(entry => {
                 const h2 = entry.target.querySelector('h2');
-                if (!h2) return;
+                if (!h2 || h2.dataset.managed) return;
 
                 if (entry.isIntersecting && !typing.has(h2)) {
                     typing.add(h2);
-                    typewrite(h2, h2.dataset.text, 50, 0.06).then(() => typing.delete(h2));
-                } else if (!entry.isIntersecting && !typing.has(h2)) {
-                    h2.textContent = '';
-                    h2.classList.remove('typing');
+                    tw(h2, h2.dataset.text, 50, 0.06).then(() => typing.delete(h2));
                 }
             });
         }, { threshold: 0.15 });
@@ -289,8 +224,8 @@
                 .attr('preserveAspectRatio', 'xMidYMid meet');
 
             function syncPosition() {
-                const ref = document.getElementById('cooc-svg');
-                const section = document.getElementById('cooc-visualization');
+                const ref = document.getElementById('world-svg');
+                const section = document.getElementById('world-visualization');
                 if (!ref || !section) return;
                 const bgMap = document.getElementById('bg-map');
                 const refRect = ref.getBoundingClientRect();
