@@ -145,6 +145,7 @@
         const topoCountries = topojson.feature(topo, topo.objects.countries).features;
         const mesh = topojson.mesh(topo, topo.objects.countries, (a, b) => a !== b);
 
+
         // Compute centroids (both pixel and geo)
         topoCountries.forEach(f => {
             const iso3 = NUMERIC_TO_ALPHA3[f.id] || f.id;
@@ -304,7 +305,13 @@
                 document.getElementById('world-year-label').textContent = currentYear;
                 if (headlineTimer) { clearTimeout(headlineTimer); headlineTimer = null; }
                 tooltip.style('opacity', 0);
-                drawYearArrows(currentYear, false);
+                drawYearHeatmap(currentYear, false);
+            });
+            // Block up/down on the slider so they don't change the value
+            yearSlider.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                }
             });
         }
 
@@ -317,7 +324,7 @@
                     const h2 = document.querySelector('#world-visualization h2');
                     if (h2) typewriteTitle(h2, MODE_TITLES[currentMode]);
                     if (currentMode === 'trend') drawTrendArrows(true);
-                    else if (currentMode === 'year') drawYearArrows(currentYear, true);
+                    else if (currentMode === 'year') drawYearHeatmap(currentYear, true);
                 } else {
                     isVisible = false;
                     collapseArrows();
@@ -383,7 +390,7 @@
             if (isVisible) drawTrendArrows(animate);
         } else if (mode === 'year') {
             resetCountryFills();
-            if (isVisible) drawYearArrows(currentYear, animate);
+            if (isVisible) drawYearHeatmap(currentYear, animate);
         }
     }
 
@@ -426,7 +433,7 @@
             document.getElementById('world-year-label').textContent = currentYear;
             if (headlineTimer) { clearTimeout(headlineTimer); headlineTimer = null; }
             tooltip.style('opacity', 0);
-            drawYearArrows(currentYear, false);
+            drawYearHeatmap(currentYear, false);
         }
     }
 
@@ -758,60 +765,39 @@
 
     // ─── Front page year mode ───
 
-    function drawYearArrows(year, animate) {
+    function drawYearHeatmap(year, animate) {
         const yi = YEARS.indexOf(year);
         if (yi < 0) return;
 
-        const yearData = [];
+        // Build lookup: iso3 → mention count for this year
+        const valByCountry = {};
+        let maxVal = 0;
         trends.forEach(d => {
             const val = d.values[yi] || 0;
-            if (val === 0) return;
-            yearData.push({ ...d, yearVal: val });
+            valByCountry[d.iso3] = val;
+            if (val > maxVal) maxVal = val;
         });
 
-        const maxVal = d3.max(yearData, d => d.yearVal) || 1;
-        const yearLenScale = d3.scaleSqrt()
-            .domain([0, maxVal])
-            .range([ARROW_MIN, ARROW_MAX]);
+        // Log scale so USA doesn't flatten everything else
+        const colorScale = d3.scaleSequentialLog(d3.interpolateYlOrRd)
+            .domain([1, maxVal || 1]);
 
-        arrowGroup.selectAll('line').remove();
+        const duration = animate ? 600 : 200;
 
-        const lines = arrowGroup.selectAll('line')
-            .data(yearData)
-            .join('line')
-            .each(function (d) {
-                const len = yearLenScale(d.yearVal);
-                const sel = d3.select(this)
-                    .attr('stroke', COLOR_INCREASE)
-                    .attr('stroke-width', 2)
-                    .attr('marker-end', 'url(#arrow-year)')
-                    .attr('pointer-events', 'none')
-                    .datum({ ...d, len });
-
-                if (animate) {
-                    sel.attr('x1', d.centroid[0]).attr('y1', d.centroid[1])
-                        .attr('x2', d.centroid[0]).attr('y2', d.centroid[1])
-                        .attr('opacity', 0);
-                } else {
-                    sel.attr('x1', d.centroid[0]).attr('y1', d.centroid[1])
-                        .attr('x2', d.centroid[0]).attr('y2', d.centroid[1] - len)
-                        .attr('opacity', 1);
-                }
+        svg.selectAll('.country')
+            .transition().duration(duration)
+            .attr('fill', function () {
+                const iso3 = d3.select(this).attr('data-id');
+                const val = valByCountry[iso3];
+                return val > 0 ? colorScale(val) : NO_DATA_COLOR;
             });
 
-        if (animate) {
-            lines.transition()
-                .delay((d, i) => i * 15)
-                .duration(500)
-                .attr('opacity', 1)
-                .attr('x2', d => d.centroid[0])
-                .attr('y2', d => d.centroid[1] - d.len);
-        }
-
+        arrowGroup.selectAll('*').remove();
         legend.transition().duration(400).attr('opacity', 0);
     }
 
     function collapseArrows() {
+        // Collapse trend arrows (lines)
         arrowGroup.selectAll('line')
             .transition().duration(300)
             .attr('x1', function () { const d = d3.select(this).datum(); return d ? d.centroid[0] : 0; })
