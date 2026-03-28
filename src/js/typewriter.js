@@ -53,9 +53,11 @@ window.Typewriter = (function () {
                         schedule(tick, speed);
                     }
                 } else {
+                    // Remove cursor after a few blinks
                     schedule(() => {
+                        cursor.transition().duration(300).style('opacity', 0).remove();
                         resolve();
-                    }, 400);
+                    }, 2000);
                 }
             }
             tick();

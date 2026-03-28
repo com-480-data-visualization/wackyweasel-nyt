@@ -25,7 +25,7 @@
         "218": "ECU", "818": "EGY", "222": "SLV", "226": "GNQ", "232": "ERI",
         "233": "EST", "231": "ETH", "242": "FJI", "246": "FIN", "250": "FRA",
         "266": "GAB", "270": "GMB", "268": "GEO", "276": "DEU", "288": "GHA",
-        "300": "GRC", "320": "GTM", "324": "GIN", "328": "GUY", "332": "HTI",
+        "300": "GRC", "304": "GRL", "320": "GTM", "324": "GIN", "328": "GUY", "332": "HTI",
         "340": "HND", "348": "HUN", "352": "ISL", "356": "IND", "360": "IDN",
         "364": "IRN", "368": "IRQ", "372": "IRL", "376": "ISR", "380": "ITA",
         "384": "CIV", "388": "JAM", "392": "JPN", "400": "JOR", "398": "KAZ",
@@ -263,9 +263,17 @@
             .on('mousemove', handleMouseMove)
             .on('mouseout', handleMouseOut);
 
-        // Borders
+        // Borders (land borders between countries)
         svg.append('path')
             .datum(mesh)
+            .attr('class', 'country-border')
+            .attr('d', pathGen)
+            .attr('stroke-width', 0.7);
+
+        // Coastlines (exterior borders)
+        const coastline = topojson.mesh(topo, topo.objects.countries, (a, b) => a === b);
+        svg.append('path')
+            .datum(coastline)
             .attr('class', 'country-border')
             .attr('d', pathGen)
             .attr('stroke-width', 0.7);
@@ -408,6 +416,7 @@
         const yearSlider = document.getElementById('world-year-slider');
         if (yearSlider) {
             yearSlider.addEventListener('input', () => {
+                if (currentMode !== 'year') return;
                 currentYear = +yearSlider.value;
                 document.getElementById('world-year-label').textContent = currentYear;
                 if (headlineTimer) { clearTimeout(headlineTimer); headlineTimer = null; }
@@ -587,12 +596,9 @@
                 svg.selectAll('.country').transition().duration(dur).attr('stroke-width', 0).attr('fill-opacity', 0);
                 svg.selectAll('.country-border').transition().duration(dur).attr('stroke-width', 0);
             } else {
-                const countryBorderW = Math.max(0.02, 0.1 * bubbleScale);
-                svg.selectAll('.country').transition().duration(dur)
-                    .attr('fill-opacity', 1)
-                    .attr('stroke-width', countryBorderW);
-                svg.selectAll('.country-border').transition().duration(dur)
-                    .attr('stroke-width', countryBorderW);
+                // US zoom: restore country borders at full width
+                svg.selectAll('.country').attr('fill-opacity', 1).attr('stroke-width', 0.7);
+                svg.selectAll('.country-border').attr('stroke-width', 0.7);
             }
             bubblesGroup
                 .transition().delay(animate ? 300 : 0).duration(300)
@@ -620,6 +626,9 @@
             hideBubbles(animate);
 
             resetCountryFills();
+            // Restore borders immediately (transitions get cancelled by drawYearHeatmap etc)
+            svg.selectAll('.country').attr('stroke-width', 0.7).attr('fill-opacity', 1);
+            svg.selectAll('.country-border').attr('stroke-width', 0.7);
             if (mode === 'trend') {
                 if (isVisible) drawTrendArrows(animate);
             } else if (mode === 'year') {
@@ -727,8 +736,7 @@
             tooltip.style('opacity', 1)
                 .html(`<strong>${t.name}</strong><br>` +
                     `Total front page mentions: ${t.total.toLocaleString()}<br>` +
-                    `Trend: <span style="color:${color};font-weight:600">${dir}</span> ` +
-                    `(slope: ${t.slope.toFixed(2)}/yr)`);
+                    `Trend: <span style="color:${color};font-weight:600">${dir}</span>`);
         } else if (currentMode === 'year') {
             const t = trends.find(tr => tr.iso3 === iso3);
             if (!t) {
@@ -996,7 +1004,7 @@
 
     function miniSparkline(values, delay) {
         const id = ++sparkId;
-        const w = 60, h = 18;
+        const w = 70, h = 24;
         const max = Math.max(...values, 0.001);
         const n = values.length;
         const points = values.map((v, i) => {
@@ -1019,8 +1027,8 @@
             `@keyframes sd${id} { from { stroke-dashoffset: ${len}; } to { stroke-dashoffset: 0; } }` +
             `@keyframes sf${id} { from { opacity: 0; } to { opacity: 1; } }` +
             `</style>` +
-            `<path d="${area}" fill="rgba(52,152,219,0.15)" style="opacity:0;animation:sf${id} 0.3s ${d + 600}ms forwards"/>` +
-            `<path d="${line}" fill="none" stroke="#3498db" stroke-width="1.2" style="stroke-dasharray:${len};stroke-dashoffset:${len};animation:sd${id} 0.6s ${d}ms ease-out forwards"/>` +
+            `<path d="${area}" fill="rgba(52,152,219,0.25)" style="opacity:0;animation:sf${id} 0.3s ${d + 600}ms forwards"/>` +
+            `<path d="${line}" fill="none" stroke="#3498db" stroke-width="1.5" style="stroke-dasharray:${len};stroke-dashoffset:${len};animation:sd${id} 0.6s ${d}ms ease-out forwards"/>` +
             `</svg>`;
     }
 
@@ -1144,9 +1152,10 @@
             if (val > maxVal) maxVal = val;
         });
 
-        // Log scale so USA doesn't flatten everything else
-        const colorScale = d3.scaleSequentialLog(d3.interpolateYlOrRd)
-            .domain([1, maxVal || 1]);
+        // Pow scale (exponent 0.3) spreads low values for better granularity
+        const colorScale = d3.scaleSequentialPow(d3.interpolateYlOrRd)
+            .exponent(0.3)
+            .domain([0, maxVal || 1]);
 
         const duration = animate ? 600 : 200;
 
@@ -1156,7 +1165,8 @@
                 const iso3 = d3.select(this).attr('data-id');
                 const val = valByCountry[iso3];
                 return val > 0 ? colorScale(val) : NO_DATA_COLOR;
-            });
+            })
+            .attr('fill-opacity', 1);
 
         arrowGroup.selectAll('*').remove();
         legend.transition().duration(400).attr('opacity', 0);

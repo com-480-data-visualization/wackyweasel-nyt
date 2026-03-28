@@ -26,8 +26,7 @@
     <header>
         <div class="header-text">
             <h1>2.2 Million Stories</h1>
-            <p class="subtitle">What 25 years of the New York Times tell us about the world</p>
-            <p class="subtitle">COM-480 Data Visualization - EPFL</p>
+            <p class="subtitle">How the New York Times connected countries across 25 years</p>
         </div>
     </header>
 
@@ -329,9 +328,9 @@
                     .attr('x', x)
                     .attr('y', y - lineLen - 2)
                     .attr('text-anchor', 'middle')
-                    .attr('font-size', '4px')
-                    .attr('fill', '#8a8fa8')
-                    .attr('opacity', 0.8);
+                    .attr('font-size', '6.5px')
+                    .attr('fill', '#c8cdd8')
+                    .attr('opacity', 0.9);
 
                 function typewriteSvg(textEl, text, speed) {
                     let i = 0;
@@ -378,17 +377,19 @@
                 }, life);
             }
 
-            // Gradual ramp-up: start with 1 dot, add one every 2.8s until 8, then regular interval
-            spawnDot();
-            let rampCount = 1;
-            const rampInterval = setInterval(() => {
+            // Gradual ramp-up: delay first dot until after positioning
+            setTimeout(() => {
                 spawnDot();
-                rampCount++;
-                if (rampCount >= 8) {
-                    clearInterval(rampInterval);
-                    setInterval(spawnDot, SPAWN_INTERVAL);
-                }
-            }, 2800);
+                let rampCount = 1;
+                const rampInterval = setInterval(() => {
+                    spawnDot();
+                    rampCount++;
+                    if (rampCount >= 10) {
+                        clearInterval(rampInterval);
+                        setInterval(spawnDot, SPAWN_INTERVAL);
+                    }
+                }, 1800);
+            }, 1600);
 
             // Header-only visibility
             const bgMap = document.getElementById('bg-map');

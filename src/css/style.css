@@ -32,6 +32,7 @@ header {
     background: var(--card-bg);
     color: white;
     padding: 2.5rem 2rem;
+    padding-top: 20dvh;
     text-align: center;
     position: fixed;
     top: 0;
@@ -41,7 +42,7 @@ header {
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     z-index: 100;
     transition: opacity 0.6s ease;
 }
@@ -256,8 +257,8 @@ section h2 {
     border-radius: var(--radius);
     box-shadow: 0 4px 16px rgba(0,0,0,0.4);
     padding: 14px 18px;
-    max-width: 280px;
-    font-size: 13px;
+    max-width: 300px;
+    font-size: 14px;
     z-index: 150;
 }
 
@@ -300,12 +301,13 @@ section h2 {
 }
 
 .panel-rank {
-    color: var(--text-light);
+    color: var(--text);
     min-width: 20px;
 }
 
 .panel-name {
     flex: 1;
+    color: #fff;
 }
 
 .panel-spark {
@@ -313,17 +315,15 @@ section h2 {
 }
 
 .panel-count {
-    color: var(--blue);
-    font-weight: 600;
+    color: #5bb8f5;
+    font-weight: 700;
     min-width: 45px;
     text-align: right;
 }
 
 /* US City Bubble Map (inside map-stack) */
 .us-state {
-    fill: #2a3555;
     stroke: rgba(52, 152, 219, 0.3);
-    stroke-width: 0.5;
 }
 
 .us-state-border {
