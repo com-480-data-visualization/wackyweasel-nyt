@@ -258,6 +258,7 @@
             .attr('class', 'country')
             .attr('data-id', d => NUMERIC_TO_ALPHA3[d.id] || d.id)
             .attr('fill', NO_DATA_COLOR)
+            .attr('stroke-width', 0.7)
             .on('mouseover', handleMouseOver)
             .on('mousemove', handleMouseMove)
             .on('mouseout', handleMouseOut);
@@ -266,7 +267,8 @@
         svg.append('path')
             .datum(mesh)
             .attr('class', 'country-border')
-            .attr('d', pathGen);
+            .attr('d', pathGen)
+            .attr('stroke-width', 0.7);
 
         // Layer groups for each mode's overlay
         arcsGroup = svg.append('g').attr('class', 'arcs-group').attr('pointer-events', 'none');
@@ -560,8 +562,8 @@
         const isUSMode = mode === 'us' || mode.startsWith('us-');
 
         if (isUSMode) {
-            // Reset country colors from heatmap
-            resetCountryFills();
+            // Reset country colors from heatmap (don't restore fill-opacity, handled per sub-mode below)
+            resetCountryFills(false);
             // Pick the right viewBox: full US or metro sub-zoom
             const targetVB = METRO_VIEWBOXES[mode] || US_VIEWBOX;
             const dur = animate ? 800 : 0;
@@ -576,16 +578,22 @@
             statesGroup
                 .transition().delay(animate ? 200 : 0).duration(300)
                 .attr('opacity', 1);
-            const stateBorderW = 0.4 * bubbleScale;
+            const stateBorderW = 0.6 * bubbleScale;
             statesGroup.selectAll('path')
                 .transition().duration(dur)
                 .attr('stroke-width', stateBorderW);
-            // On metro zoom, match country borders to state borders; on US zoom, keep thinner
-            // .country paths have their own stroke + .country-border mesh overlaps, so halve to avoid double thickness
-            const countryBorderW = mode.startsWith('us-') ? stateBorderW * 0.5 : Math.max(0.02, 0.1 * bubbleScale);
-            svg.selectAll('.country, .country-border')
-                .transition().duration(dur)
-                .attr('stroke-width', countryBorderW);
+            if (mode.startsWith('us-')) {
+                // Metro zoom: hide country paths entirely (state borders are sufficient)
+                svg.selectAll('.country').transition().duration(dur).attr('stroke-width', 0).attr('fill-opacity', 0);
+                svg.selectAll('.country-border').transition().duration(dur).attr('stroke-width', 0);
+            } else {
+                const countryBorderW = Math.max(0.02, 0.1 * bubbleScale);
+                svg.selectAll('.country').transition().duration(dur)
+                    .attr('fill-opacity', 1)
+                    .attr('stroke-width', countryBorderW);
+                svg.selectAll('.country-border').transition().duration(dur)
+                    .attr('stroke-width', countryBorderW);
+            }
             bubblesGroup
                 .transition().delay(animate ? 300 : 0).duration(300)
                 .attr('opacity', 1);
@@ -631,15 +639,19 @@
             svg.transition().duration(dur).ease(d3.easeCubicInOut)
                 .attr('viewBox', `0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`);
             // Reset border widths
-            svg.selectAll('.country, .country-border').transition().duration(dur).attr('stroke-width', 0.3);
+            svg.selectAll('.country').transition().duration(dur).attr('stroke-width', 0.7).attr('fill-opacity', 1);
+            svg.selectAll('.country-border').transition().duration(dur).attr('stroke-width', 0.7);
         }
     }
 
-    function resetCountryFills() {
+    function resetCountryFills(restoreOpacity) {
         svg.selectAll('.country')
             .interrupt()
             .classed('country-selected', false)
             .attr('fill', NO_DATA_COLOR);
+        if (restoreOpacity !== false) {
+            svg.selectAll('.country').attr('fill-opacity', 1);
+        }
     }
 
     // ─── Keyboard handling ───

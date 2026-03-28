@@ -87,16 +87,3 @@ Section titles use a typewriter effect with typo simulation (nearby-key errors t
 7. **Background dot map** with spawn pings and ambient animation
 8. **Typewriter section titles** with typo simulation
 9. **Scroll-snap full-viewport layout** with dark theme
-
-## Current Prototype Status
-
-All core and extra visualizations are implemented and functional:
-
-- Co-occurrence autoplay loops through countries with arc animations
-- Front page map supports both trend and year modes with smooth transitions
-- Year mode tooltip cycles real headlines with typewriter animation
-- US bubble map renders 160 cities with correct projections
-- Word count grid displays average article length by country
-- Background dot map animates on the header page
-- All sections trigger animations on scroll via IntersectionObserver
-- Full preprocessing pipeline processes 2.2M articles in minutes

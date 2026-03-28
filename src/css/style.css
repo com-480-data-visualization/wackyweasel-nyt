@@ -157,7 +157,6 @@ section h2 {
 
 .country {
     stroke: rgba(52, 152, 219, 0.3);
-    stroke-width: 0.3;
     cursor: pointer;
 }
 
@@ -170,7 +169,6 @@ section h2 {
 .country-border {
     fill: none;
     stroke: rgba(52, 152, 219, 0.3);
-    stroke-width: 0.3;
     pointer-events: none;
 }
 
