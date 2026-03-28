@@ -10,17 +10,19 @@
 
 **10% of the final grade**
 
-[See MILESTONE1.md](MILESTONE1.md)
+[See MILESTONE1.md](MILESTONE1.md) | [PDF](MILESTONE1.pdf)
 
 ## Milestone 2 (17th April, 5pm)
 
 **10% of the final grade**
 
-[See MILESTONE2.md](MILESTONE2.md)
+[See MILESTONE2.md](MILESTONE2.md) | [PDF](MILESTONE2.pdf)
 
 ## Milestone 3 (29th May, 5pm)
 
 **80% of the final grade**
+
+[Process Book PDF](process-book/process-book.pdf)
 
 
 ## Usage
