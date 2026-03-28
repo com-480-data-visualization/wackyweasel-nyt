@@ -23,6 +23,11 @@
 !src/data/processed/
 !src/data/processed/*.json
 
+# Whitelist: process book
+!process-book/
+!process-book/*.md
+!process-book/*.pdf
+
 # Whitelist: scripts
 !scripts/
 !scripts/*.py
