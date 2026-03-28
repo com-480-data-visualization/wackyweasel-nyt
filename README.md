@@ -22,7 +22,7 @@
 
 **80% of the final grade**
 
-[Process Book PDF](process-book/process-book.pdf)
+[Process Book PDF](process-book/process-book.pdf) | [Data (Polybox)](https://polybox.ethz.ch/index.php/s/9M5ZBsrq9CLWpyE) - NYT dataset, SQLite database, and processed JSON files
 
 
 ## Usage
