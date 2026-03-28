@@ -18,6 +18,10 @@ The tooltip was expanded into a side panel showing the country name, total headl
 
 The trend arrow map and US city bubble map both received animated sparkline tooltips showing yearly coverage percentages. The bubble map now dims all other bubbles when hovering over a city, creating a spotlight effect.
 
+![Original sketch](images/world-map.png){ width=48% } ![Final implementation](images/headlines_final.png){ width=48% }
+
+*Left: Original sketch from milestone 2. Right: Final implementation with hover-triggered arcs and connection panel.*
+
 ## Data normalization
 
 Investigating the trend arrows revealed that almost every country showed decreasing coverage. This turned out to be because the NYT published roughly 110,000 articles per year in the early 2000s but only around 50,000 in recent years. I updated all preprocessing to normalize counts as a percentage of total articles per year. For consistency, dates 2024 and 2025 are excluded from all data throughout this report.

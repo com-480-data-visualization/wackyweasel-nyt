@@ -14,6 +14,10 @@ The header and a credits page were integrated as the first and last modes. Both 
 
 I added full touch support for mobile devices. On the title page, the user can swipe down or tap to enter. Navigation between modes uses tappable dots at the bottom of the screen. Countries and bubbles respond to tap instead of hover, with a tap-elsewhere-to-dismiss pattern. Tooltips appear as a fixed bar at the bottom of the screen, and the connection panel slides up as a bottom sheet.
 
+![Desktop](images/slider_final.png){ width=58% } ![Mobile](images/slider_final_mobile.png){ width=28% }
+
+*Left: Desktop with hover tooltips. Right: Mobile with horizontal scroll and navigation dots.*
+
 The map is rendered wider than the viewport on mobile using a horizontal scroll container, so it has a usable size despite the portrait orientation. I also built a precision bubble selector for the US city map - the user toggles precision mode, then drags to aim at bubbles with the selection point offset above their finger, and the nearest bubble highlights. This was a lot more work than I initially thought it would be, but it works really well - the user can now precisely select even the smallest bubbles on a phone screen.
 
 ## AI disclosure

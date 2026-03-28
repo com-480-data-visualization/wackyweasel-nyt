@@ -23,6 +23,16 @@
 **80% of the final grade**
 
 
+## Usage
+
+```bash
+# Serve locally
+python3 -m http.server 8000
+# Open http://localhost:8000
+```
+
+No build step, no npm, no bundler. Scroll or use arrow keys to navigate between visualization modes. On mobile, tap the navigation dots at the bottom.
+
 ## Late policy
 
 - < 24h: 80% of the grade for the milestone

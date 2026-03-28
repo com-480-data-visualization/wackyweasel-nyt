@@ -950,7 +950,7 @@
                 return;
             }
             if (coocSelectedCountry === iso3) return;
-            showConnections(iso3);
+            showConnections(iso3, event);
         } else if (currentMode === 'trend') {
             const t = trends.find(tr => tr.iso3 === iso3);
             if (!t) {
@@ -1165,7 +1165,7 @@
 
     // ─── Co-occurrence mode ───
 
-    function showConnections(iso3) {
+    function showConnections(iso3, event) {
         if (!coocData || !coocData[iso3]) return;
 
         const gen = ++coocGeneration;
@@ -1233,7 +1233,7 @@
             }, arcDelay + arcDuration);
         });
 
-        showConnectionPanel(iso3, connections);
+        showConnectionPanel(iso3, connections, event);
     }
 
     let sparkId = 0;
@@ -1268,14 +1268,23 @@
             `</svg>`;
     }
 
-    function showConnectionPanel(iso3, connections) {
+    function showConnectionPanel(iso3, connections, event) {
         const panel = d3.select('#connection-panel');
         const sourceName = mentionLookup[iso3] ? mentionLookup[iso3].name : iso3;
 
         panel
             .style('display', 'block')
-            .style('opacity', 0)
-            .html(
+            .style('opacity', 0);
+
+        // Position near mouse on desktop
+        if (!isMobile && event) {
+            panel
+                .style('left', (event.pageX + 16) + 'px')
+                .style('top', (event.pageY - 20) + 'px')
+                .style('right', 'auto');
+        }
+
+        panel.html(
                 `<div class="panel-header">
                     <strong>${sourceName}</strong>
                 </div>
