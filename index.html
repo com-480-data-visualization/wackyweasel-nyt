@@ -44,6 +44,7 @@
                 <svg id="world-svg"></svg>
             </div>
             <div id="connection-panel" style="display:none;"></div>
+            <button id="precision-toggle" style="display:none;">Precision</button>
             <div class="mode-dots">
                 <span class="mode-dot active" data-mode="title"></span>
                 <span class="mode-dot" data-mode="cooccurrence"></span>
@@ -150,8 +151,9 @@
         const TOPO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
         const DATA_URL = 'src/data/processed/country_mentions.json';
         const W = 960, H = 500;
-        const MAX_DOTS = 20;
-        const SPAWN_INTERVAL = 1400;
+        const isMobileBg = window.matchMedia('(pointer: coarse) and (max-width: 768px)').matches;
+        const MAX_DOTS = isMobileBg ? 8 : 20;
+        const SPAWN_INTERVAL = isMobileBg ? 2500 : 1400;
         const DOT_LIFE_MIN = 6000;
         const DOT_LIFE_MAX = 12000;
 
@@ -223,18 +225,30 @@
                 .attr('preserveAspectRatio', 'xMidYMid meet');
 
             function syncPosition() {
-                const ref = document.getElementById('world-svg');
-                const section = document.getElementById('world-visualization');
-                if (!ref || !section) return;
                 const bgMap = document.getElementById('bg-map');
-                const refRect = ref.getBoundingClientRect();
-                const secRect = section.getBoundingClientRect();
-                const offsetTop = refRect.top - secRect.top;
-                const mapHeight = refRect.width * (H / W);
-                bgMap.style.width = refRect.width + 'px';
-                bgMap.style.height = mapHeight + 'px';
-                bgMap.style.left = refRect.left + 'px';
-                bgMap.style.top = offsetTop + 'px';
+                if (isMobileBg) {
+                    // On mobile: center in viewport, fit full map
+                    const mapWidth = window.innerWidth;
+                    const mapHeight = mapWidth * (H / W);
+                    const topOffset = (window.innerHeight - mapHeight) / 2;
+                    bgMap.style.width = mapWidth + 'px';
+                    bgMap.style.height = mapHeight + 'px';
+                    bgMap.style.left = '0px';
+                    bgMap.style.top = topOffset + 'px';
+                } else {
+                    // On desktop: align with world-svg
+                    const ref = document.getElementById('world-svg');
+                    const section = document.getElementById('world-visualization');
+                    if (!ref || !section) return;
+                    const refRect = ref.getBoundingClientRect();
+                    const secRect = section.getBoundingClientRect();
+                    const offsetTop = refRect.top - secRect.top;
+                    const mapHeight = refRect.width * (H / W);
+                    bgMap.style.width = refRect.width + 'px';
+                    bgMap.style.height = mapHeight + 'px';
+                    bgMap.style.left = refRect.left + 'px';
+                    bgMap.style.top = offsetTop + 'px';
+                }
             }
             setTimeout(() => {
                 syncPosition();
@@ -391,20 +405,22 @@
                 }, 1800);
             }, 1600);
 
-            // Header-only visibility
+            // Header-only visibility (desktop only — mobile handled by worldmap.js)
             const bgMap = document.getElementById('bg-map');
             let positioned = false;
-            const bgObserver = new IntersectionObserver(entries => {
-                if (!positioned) return;
-                entries.forEach(entry => {
-                    if (!entry.isIntersecting) return;
-                    const id = entry.target.id || entry.target.tagName.toLowerCase();
-                    bgMap.style.opacity = (id === 'header') ? '0.65' : '0';
-                });
-            }, { threshold: 0.5 });
+            if (!isMobileBg) {
+                const bgObserver = new IntersectionObserver(entries => {
+                    if (!positioned) return;
+                    entries.forEach(entry => {
+                        if (!entry.isIntersecting) return;
+                        const id = entry.target.id || entry.target.tagName.toLowerCase();
+                        bgMap.style.opacity = (id === 'header') ? '0.65' : '0';
+                    });
+                }, { threshold: 0.5 });
 
-            bgObserver.observe(document.querySelector('header'));
-            document.querySelectorAll('main > section').forEach(el => bgObserver.observe(el));
+                bgObserver.observe(document.querySelector('header'));
+                document.querySelectorAll('main > section').forEach(el => bgObserver.observe(el));
+            }
         }
 
         document.addEventListener('DOMContentLoaded', init);

@@ -3,6 +3,10 @@
 // Modes: cooccurrence → trend → year (cycle with ↓ arrow key)
 
 (function () {
+    const isTouchPrimary = window.matchMedia('(pointer: coarse)').matches;
+    const isSmallScreen = window.matchMedia('(max-width: 768px)').matches;
+    const isMobile = isTouchPrimary && isSmallScreen;
+
     const MAP_WIDTH = 960;
     const MAP_HEIGHT = 500;
     const TOPO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
@@ -55,13 +59,13 @@
         cooccurrence: 'Which Countries Share Headlines?',
         trend: 'Who Makes the Front Page?',
         year: 'Who Makes the Front Page?',
-        us: 'Where in the US Does the NYT Report From?',
+        us: 'Where Does the NYT Report From?',
         'us-ny': 'New York City Metro',
         'us-la': 'Los Angeles Metro',
         'us-sf': 'San Francisco Bay Area'
     };
     const MODE_DESCRIPTIONS = {
-        cooccurrence: 'Countries that appear together in NYT articles. Hover over a country to see its connections.',
+        cooccurrence: 'Countries that appear together in NYT articles. Tap a country to see connections.',
         trend: 'How NYT front page country mentions shifted over 25 years. Arrows show the trend.',
         year: 'Front page mentions by year. Use the slider or arrow keys to browse.',
         us: 'City-level dateline mentions across 2.2M articles. Bigger bubble, more coverage.',
@@ -259,9 +263,9 @@
             .attr('data-id', d => NUMERIC_TO_ALPHA3[d.id] || d.id)
             .attr('fill', NO_DATA_COLOR)
             .attr('stroke-width', 0.7)
-            .on('mouseover', handleMouseOver)
-            .on('mousemove', handleMouseMove)
-            .on('mouseout', handleMouseOut);
+            .on('mouseover', isMobile ? null : handleMouseOver)
+            .on('mousemove', isMobile ? null : handleMouseMove)
+            .on('mouseout', isMobile ? null : handleMouseOut);
 
         // Borders (land borders between countries)
         svg.append('path')
@@ -336,9 +340,137 @@
             .attr('fill', d => cityColorScale(d.count))
             .attr('stroke', 'none')
             .attr('opacity', 0)
-            .on('mouseover', handleBubbleOver)
-            .on('mousemove', handleMouseMove)
-            .on('mouseout', handleBubbleOut);
+            .on('mouseover', isMobile ? null : handleBubbleOver)
+            .on('mousemove', isMobile ? null : handleMouseMove)
+            .on('mouseout', isMobile ? null : handleBubbleOut);
+
+        // Mobile touch handlers for countries and bubbles
+        if (isMobile) {
+            let tappedCountryIso = null;
+            let tappedCountryEl = null;
+
+            svg.selectAll('.country').on('touchstart', function (event, d) {
+                event.stopPropagation();
+                const iso3 = NUMERIC_TO_ALPHA3[d.id] || d.id;
+                if (tappedCountryIso === iso3) {
+                    // Tap same country again: dismiss
+                    handleMouseOut.call(this);
+                    tappedCountryIso = null;
+                    tappedCountryEl = null;
+                    return;
+                }
+                // Clear previous highlight
+                if (tappedCountryEl) handleMouseOut.call(tappedCountryEl);
+                tappedCountryIso = iso3;
+                tappedCountryEl = this;
+                handleMouseOver.call(this, event, d);
+            }, { passive: false });
+
+            // Precision bubble selector: toggle-gated, offset above finger
+            let reticle = null;
+            let reticleTarget = null;
+            let precisionOn = false;
+            const RETICLE_OFFSET = 80;
+            const precisionBtn = document.getElementById('precision-toggle');
+
+            if (precisionBtn) {
+                precisionBtn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    precisionOn = !precisionOn;
+                    precisionBtn.classList.toggle('active', precisionOn);
+                });
+            }
+
+            function screenToSvg(clientX, clientY) {
+                const svgEl = svg.node();
+                const pt = svgEl.createSVGPoint();
+                pt.x = clientX;
+                pt.y = clientY;
+                return pt.matrixTransform(svgEl.getScreenCTM().inverse());
+            }
+
+            function findNearestBubble(svgX, svgY) {
+                let nearest = null, minDist = Infinity;
+                bubblesGroup.selectAll('.city-bubble').each(function (d) {
+                    const dx = d.x - svgX, dy = d.y - svgY;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < minDist) { minDist = dist; nearest = { el: this, d, dist }; }
+                });
+                return nearest && nearest.dist < 15 ? nearest : null;
+            }
+
+            const worldContainer = document.getElementById('world-container');
+            let precisionActive = false; // tracking if a precision drag is in progress
+
+            worldContainer.addEventListener('touchstart', function (e) {
+                if (!precisionOn) return;
+                if (!(currentMode === 'us' || currentMode.startsWith('us-'))) return;
+                if (e.touches.length !== 1) return;
+                precisionActive = true;
+                precisionDragged = false;
+                reticleTarget = null;
+            }, { passive: true });
+
+            let precisionDragged = false;
+            worldContainer.addEventListener('touchmove', function (e) {
+                if (!precisionOn || !precisionActive) return;
+                if (e.touches.length !== 1) return;
+                e.preventDefault();
+                precisionDragged = true;
+                const svgPt = screenToSvg(e.touches[0].clientX, e.touches[0].clientY - RETICLE_OFFSET);
+                const hit = findNearestBubble(svgPt.x, svgPt.y);
+                bubblesGroup.selectAll('.city-bubble').each(function(d) {
+                    d3.select(this).attr('fill', cityColorScale(d.count));
+                });
+                reticleTarget = hit;
+                if (hit) d3.select(hit.el).attr('fill', 'white');
+            }, { passive: false });
+
+            let precisionJustSelected = false;
+            worldContainer.addEventListener('touchend', function (e) {
+                if (!precisionOn || !precisionActive) return;
+                precisionActive = false;
+                if (precisionDragged && reticleTarget) {
+                    // Drag ended on a bubble: select it
+                    precisionJustSelected = true;
+                    handleBubbleOver.call(reticleTarget.el, e, reticleTarget.d);
+                    setTimeout(() => { precisionJustSelected = false; }, 50);
+                } else if (!precisionDragged) {
+                    // Single tap: dismiss current selection
+                    if (activeBubbleEl) {
+                        handleBubbleOut.call(activeBubbleEl);
+                        activeBubbleEl = null;
+                    }
+                    tooltip.style('opacity', 0);
+                    precisionJustSelected = true;
+                    setTimeout(() => { precisionJustSelected = false; }, 50);
+                }
+                reticleTarget = null;
+            }, { passive: true });
+
+            // Tap (not drag) elsewhere to dismiss tooltips and panel
+            let dismissStartX = 0, dismissStartY = 0;
+            document.addEventListener('touchstart', function (event) {
+                dismissStartX = event.touches[0].clientX;
+                dismissStartY = event.touches[0].clientY;
+            }, { passive: true });
+            document.addEventListener('touchend', function (event) {
+                const dx = Math.abs(event.changedTouches[0].clientX - dismissStartX);
+                const dy = Math.abs(event.changedTouches[0].clientY - dismissStartY);
+                if (dx > 10 || dy > 10) return; // was a drag, not a tap
+                const t = event.target;
+                if (t.closest('.country') || t.closest('.city-bubble')) return;
+                if (t.closest('#connection-panel') || t.closest('.tooltip')) return;
+                if (t.closest('.mode-dot') || t.closest('#world-year-slider') || t.closest('#world-year-controls')) return;
+                if (precisionJustSelected) return;
+                if (tappedCountryEl) handleMouseOut.call(tappedCountryEl);
+                tooltip.style('opacity', 0);
+                tappedCountryIso = null;
+                tappedCountryEl = null;
+                if (currentMode === 'cooccurrence') clearCooccurrence();
+            });
+
+        }
 
         // Legend (for trend mode)
         legend = svg.append('g')
@@ -412,6 +544,92 @@
         const exitEl = document.getElementById('exit-page');
         if (exitEl) exitEl.addEventListener('wheel', handleWheel, { passive: false });
 
+        // Touch swipe for mode switching (mobile)
+        if (isMobile) {
+            let touchStartY = 0;
+            let touchStartX = 0;
+            const yearSliderEl = document.getElementById('world-year-slider');
+
+            function handleTouchStart(e) {
+                touchStartY = e.touches[0].clientY;
+                touchStartX = e.touches[0].clientX;
+            }
+            function handleTouchMove(e) {
+                // Allow scrolling inside panel and tooltip
+                if (e.target.closest('#connection-panel') || e.target.closest('.tooltip')) return;
+                // Prevent native scroll while swiping on the map
+                const dy = Math.abs(e.touches[0].clientY - touchStartY);
+                const dx = Math.abs(e.touches[0].clientX - touchStartX);
+                if (dy > 10 && dy > dx) e.preventDefault();
+            }
+            function handleTouchEnd(e) {
+                // Skip if scrolling inside panel, tooltip, or year slider
+                if (e.target.closest('#connection-panel') || e.target.closest('.tooltip')) return;
+                if (yearSliderEl && yearSliderEl.contains(e.target)) return;
+
+                // On mobile, swipe only works on title (to dismiss) and exit (to go back)
+                if (currentMode !== 'title' && currentMode !== 'exit') return;
+
+                const deltaY = touchStartY - e.changedTouches[0].clientY;
+                const deltaX = touchStartX - e.changedTouches[0].clientX;
+                if (Math.abs(deltaY) < 40 || Math.abs(deltaY) < Math.abs(deltaX)) return;
+                if (wheelCooldown) return;
+
+                const idx = MODES.indexOf(currentMode);
+                if (deltaY > 0 && idx < MODES.length - 1) {
+                    wheelCooldown = true;
+                    setTimeout(() => { wheelCooldown = false; }, 600);
+                    document.documentElement.style.scrollSnapType = 'none';
+                    activateMode(MODES[idx + 1], true);
+                } else if (deltaY < 0 && idx > 0) {
+                    wheelCooldown = true;
+                    setTimeout(() => { wheelCooldown = false; }, 600);
+                    document.documentElement.style.scrollSnapType = 'none';
+                    activateMode(MODES[idx - 1], true);
+                }
+            }
+
+            [worldSection, headerEl, exitEl].forEach(el => {
+                if (!el) return;
+                el.addEventListener('touchstart', handleTouchStart, { passive: true });
+                el.addEventListener('touchmove', handleTouchMove, { passive: false });
+                el.addEventListener('touchend', handleTouchEnd, { passive: true });
+            });
+
+            // Tap to dismiss title/exit overlays (skip if it was a swipe)
+            let wasSwiped = false;
+            const origTouchEnd = handleTouchEnd;
+            handleTouchEnd = function(e) {
+                const deltaY = touchStartY - e.changedTouches[0].clientY;
+                wasSwiped = Math.abs(deltaY) > 40;
+                origTouchEnd(e);
+            };
+            // Re-register with updated handler
+            [worldSection, headerEl, exitEl].forEach(el => {
+                if (!el) return;
+                el.removeEventListener('touchend', origTouchEnd);
+                el.addEventListener('touchend', handleTouchEnd, { passive: true });
+            });
+
+            if (headerEl) headerEl.addEventListener('click', () => {
+                if (wasSwiped) { wasSwiped = false; return; }
+                if (currentMode === 'title') activateMode('cooccurrence', true);
+            });
+            if (exitEl) exitEl.addEventListener('click', () => {
+                if (wasSwiped) { wasSwiped = false; return; }
+                if (currentMode === 'exit') activateMode('us-sf', true);
+            });
+        }
+
+        // Mode dots: clickable navigation
+        document.querySelectorAll('.mode-dot').forEach(dot => {
+            dot.style.cursor = 'pointer';
+            dot.addEventListener('click', () => {
+                const mode = dot.dataset.mode;
+                if (mode && mode !== currentMode) activateMode(mode, true);
+            });
+        });
+
         // Year slider
         const yearSlider = document.getElementById('world-year-slider');
         if (yearSlider) {
@@ -474,6 +692,8 @@
             if (header) { header.style.opacity = '1'; header.style.pointerEvents = ''; }
             if (bgMap) bgMap.style.opacity = '0.65';
             if (exitPage) { exitPage.style.opacity = '0'; exitPage.style.pointerEvents = 'none'; }
+            const dots = document.querySelector('.mode-dots');
+            if (dots) dots.style.opacity = '0';
             document.querySelectorAll('.mode-dot').forEach(d => d.classList.toggle('active', d.dataset.mode === mode));
             return;
         }
@@ -514,7 +734,7 @@
             setTimeout(() => {
                 if (currentMode === 'exit' && exitPage) {
                     exitPage.style.opacity = '1';
-                    exitPage.style.pointerEvents = '';
+                    exitPage.style.pointerEvents = 'auto';
                 }
             }, 1500);
             document.querySelectorAll('.mode-dot').forEach(d => d.classList.toggle('active', d.dataset.mode === mode));
@@ -530,7 +750,7 @@
         const descRestore = document.getElementById('world-description');
         if (descRestore) descRestore.style.opacity = '';
         const dotsRestore = document.querySelector('.mode-dots');
-        if (dotsRestore) dotsRestore.style.opacity = '';
+        if (dotsRestore) dotsRestore.style.opacity = '1';
 
         // Clean up previous mode
         clearCooccurrence();
@@ -569,6 +789,12 @@
         });
 
         const isUSMode = mode === 'us' || mode.startsWith('us-');
+
+        // Show/hide precision toggle on mobile US modes
+        const precisionBtn = document.getElementById('precision-toggle');
+        if (precisionBtn && isMobile) {
+            precisionBtn.style.display = isUSMode ? 'block' : 'none';
+        }
 
         if (isUSMode) {
             // Reset country colors from heatmap (don't restore fill-opacity, handled per sub-mode below)
@@ -776,6 +1002,7 @@
     }
 
     function handleMouseMove(event) {
+        if (isMobile) return;
         tooltip.style('left', (event.pageX + 12) + 'px')
             .style('top', (event.pageY - 28) + 'px');
     }
@@ -794,8 +1021,15 @@
     const SPARK_W = 260, SPARK_H = 85;
     const SPARK_PAD = { top: 8, right: 10, bottom: 18, left: 32 };
 
+    let activeBubbleEl = null;
+
     function handleBubbleOver(event, d) {
-        d3.select(this).attr('opacity', 1).attr('stroke-width', 1);
+        // Clear previous bubble highlight
+        if (activeBubbleEl) {
+            d3.select(activeBubbleEl).attr('stroke', 'none').attr('fill', cityColorScale(d3.select(activeBubbleEl).datum().count));
+        }
+        activeBubbleEl = this;
+        d3.select(this).attr('opacity', 1).attr('fill', 'white').attr('stroke', 'none');
         tooltip.html(`<strong>${d.city}, ${d.state}</strong><br>${d.count.toLocaleString()} articles`)
             .style('opacity', 1);
         if (d.pct_by_year) {
@@ -805,7 +1039,9 @@
     }
 
     function handleBubbleOut() {
-        d3.select(this).attr('opacity', 0.75).attr('stroke-width', 0.3);
+        const d = d3.select(this).datum();
+        d3.select(this).attr('opacity', 0.75).attr('fill', cityColorScale(d.count)).attr('stroke', 'none');
+        activeBubbleEl = null;
         tooltip.style('opacity', 0);
     }
 

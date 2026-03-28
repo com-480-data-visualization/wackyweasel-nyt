@@ -233,6 +233,10 @@ section h2 {
     justify-content: center;
     gap: 8px;
     margin-top: 12px;
+    position: relative;
+    z-index: 160;
+    opacity: 0;
+    transition: opacity 0.3s;
 }
 
 .mode-dot {
@@ -252,9 +256,9 @@ section h2 {
     position: absolute;
     right: 20px;
     top: 80px;
-    background: #16213e;
-    color: var(--text);
-    border-radius: var(--radius);
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    border-radius: 6px;
     box-shadow: 0 4px 16px rgba(0,0,0,0.4);
     padding: 14px 18px;
     max-width: 300px;
@@ -331,6 +335,29 @@ section h2 {
     stroke: rgba(52, 152, 219, 0.3);
     stroke-width: 0.5;
     pointer-events: none;
+}
+
+#precision-toggle {
+    position: absolute;
+    bottom: 50px;
+    right: 10px;
+    z-index: 160;
+    background: #2a3555;
+    color: var(--text-light);
+    border: 1px solid rgba(52, 152, 219, 0.3);
+    border-radius: 16px;
+    padding: 4px 12px;
+    font-family: 'Courier Prime', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background 0.2s, color 0.2s;
+}
+
+#precision-toggle.active {
+    background: var(--blue);
+    color: white;
+    border-color: var(--blue);
 }
 
 .city-bubble {
@@ -496,9 +523,96 @@ section h2 .typewriter-cursor {
     50% { opacity: 0; }
 }
 
+/* Touch-action for map SVG */
+#world-svg { touch-action: none; }
+@media (max-width: 768px) {
+    #world-svg { touch-action: pan-x; }
+}
+.mode-dot { touch-action: manipulation; }
+#world-year-slider { touch-action: manipulation; }
+
 /* Responsive */
 @media (max-width: 768px) {
     header h1 { font-size: 1.8rem; }
-    main { padding: 0.8rem; }
-    section { padding: 1rem; }
+    header { padding-top: 15dvh; }
+    .subtitle { font-size: 0.9rem; }
+    main { padding: 0; }
+    section { padding: 0.8rem 1rem; }
+    section h2 { font-size: 1.1rem; }
+    #world-description { font-size: 0.8rem; margin-bottom: 0.5rem; min-height: 4em; }
+    #world-visualization h2 { min-height: 3.2em; }
+
+    /* Section: push title to top, dots to bottom */
+    section {
+        padding: 0;
+        justify-content: space-between;
+    }
+    section h2 {
+        padding: 0.6rem 0.6rem 0;
+        margin-bottom: 0;
+        font-size: 1rem;
+    }
+    #world-description {
+        padding: 0 0.6rem;
+        margin-bottom: 0;
+        min-height: 0;
+        font-size: 0.75rem;
+    }
+    #world-visualization h2 { min-height: 0; }
+
+    /* Map: horizontal scroll container */
+    #world-container {
+        margin: 0;
+        overflow-x: scroll;
+        overflow-y: hidden;
+        flex: 1;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    #world-container::-webkit-scrollbar { display: none; }
+    #world-svg {
+        width: auto;
+        max-width: none;
+        height: 72dvh;
+        aspect-ratio: 960 / 500;
+        flex-shrink: 0;
+    }
+
+    /* Dots at bottom edge */
+    .mode-dots { margin: 0; padding: 6px 0; }
+
+    /* Mode dots: bigger tap targets */
+    .mode-dots { gap: 12px; padding: 8px 0; }
+    .mode-dot { width: 16px; height: 16px; }
+
+    /* Year slider full-width */
+    #world-year-slider { width: 100%; max-width: 80vw; height: 32px; }
+    #world-year-label { font-size: 1.1rem; }
+
+    /* Tooltip: fixed bottom bar, above mode dots */
+    .tooltip {
+        position: fixed !important;
+        bottom: 80px;
+        left: 50% !important;
+        top: auto !important;
+        transform: translateX(-50%);
+        width: calc(100vw - 32px);
+        max-width: 400px;
+        z-index: 155;
+    }
+
+    /* Connection panel: bottom sheet */
+    #connection-panel {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        top: auto;
+        max-width: 100%;
+        max-height: 40vh;
+        overflow-y: auto;
+        border-radius: 12px 12px 0 0;
+        padding-bottom: env(safe-area-inset-bottom, 16px);
+        z-index: 200;
+    }
 }
