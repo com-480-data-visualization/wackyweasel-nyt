@@ -4,6 +4,8 @@
 | -------------- | ------ |
 | Florian Hitz | 424415 |
 
+**Live demo**: [dataviz.02o.ch](https://dataviz.02o.ch)
+
 [Milestone 1](#milestone-1) • [Milestone 2](#milestone-2) • [Milestone 3](#milestone-3)
 
 ## Milestone 1 (20th March, 5pm)
@@ -31,30 +33,13 @@
 # Serve locally
 python3 -m http.server 8000
 # Open http://localhost:8000
+
+# Or with Docker
+docker build -t nyt-viz .
+docker run -p 8000:8000 nyt-viz
 ```
 
-No build step, no npm, no bundler. Scroll or use arrow keys to navigate between visualization modes. On mobile, tap the navigation dots at the bottom.
-
-### Preprocessing
-
-The preprocessed JSON files are included in the repo. To regenerate from the SQLite database (download from Polybox link above):
-
-```bash
-# Country mentions + co-occurrence (~8-10 min)
-python3 scripts/preprocess_countries.py
-
-# Country mentions by section (~8-10 min)
-python3 scripts/preprocess_country_sections.py
-
-# Front page headlines per country/year (~2 min)
-python3 scripts/preprocess_headlines.py
-
-# US city mentions from glocations keywords (~1 min)
-python3 scripts/preprocess_cities.py
-
-# CSV to SQLite (only needed once if starting from raw CSV)
-python3 scripts/csv_to_sqlite.py
-```
+No build step, no npm, no bundler. Vanilla JS + D3.js v7, static files only.
 
 ### Controls
 
@@ -63,3 +48,22 @@ python3 scripts/csv_to_sqlite.py
 - **Tap** (mobile): Same interactions adapted for touch
 - **Year slider** (heatmap mode): Scrub through 2000-2023, left/right arrow keys
 - **Range slider** (trend mode): Select year range for trend computation, shift+arrows for start year
+- **Precision mode** (mobile, US maps): Toggle for accurate bubble selection
+
+### Preprocessing
+
+The preprocessed JSON files are included in the repo. To regenerate from the SQLite database (download from Polybox link above):
+
+```bash
+python3 scripts/preprocess_countries.py          # country mentions + co-occurrence (~8-10 min)
+python3 scripts/preprocess_country_sections.py    # mentions by section (~8-10 min)
+python3 scripts/preprocess_headlines.py           # front page headlines per country/year (~2 min)
+python3 scripts/preprocess_cities.py              # US city mentions (~1 min)
+python3 scripts/csv_to_sqlite.py                  # CSV to SQLite (only needed once)
+```
+
+### Process Book
+
+```bash
+cd process-book && bash build.sh    # builds title page (typst) + content (pandoc) + end page (typst)
+```
