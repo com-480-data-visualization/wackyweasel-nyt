@@ -2,13 +2,13 @@
 
 ## Typewriter effect
 
-I added a typewriter animation to all text headings. The header title, subtitles, and section titles all type out character by character. The effect re-triggers on each scroll - when a section leaves the viewport, its title is cleared, and when it re-enters, the typewriter runs again.
+I added a typewriter animation to all text headings. The header title, subtitles, and section titles all type out character by character. The effect re-triggers on each scroll. When a section leaves the viewport, its title is cleared, and when it re-enters, the typewriter runs again.
 
 To make the effect feel more human, I added a typo simulation. I once read an article on Hacker News where this idea was introduced, but I could not find it again. Each character has a small probability of being mistyped using a nearby-key map. When a typo occurs, the wrong character appears briefly, gets deleted, and the correct character is typed - mimicking a real person catching and correcting a mistake.
 
 I applied the same approach to the background dot map's country name labels, where each label types out letter by letter after the connecting line finishes drawing.
 
-## Co-occurrence map - hover interaction
+## Co-occurrence map: hover interaction
 
 I reworked the co-occurrence map from the automated animation to a hover-triggered interaction. The map now responds to the user hovering over a country, drawing connection arcs to the top 10 co-mentioned countries. When the mouse leaves, everything fades back. I added a generation counter to prevent animation interleaving when the user moves quickly between countries.
 

@@ -2,7 +2,7 @@
 
 ## Trend range slider
 
-I added a dual-handle range slider to the trend arrow map that lets the user select a custom year range (e.g. 2005-2015) instead of always computing trends over the full 2000-2023 period. The arrows recompute in real time as the range changes, which makes it possible to discover patterns that are invisible in the full-range view - like how Iraq's coverage spiked during the war years and declined after, or how Ukraine only becomes significant after 2014.
+I added a dual-handle range slider to the trend arrow map that lets the user select a custom year range (e.g. 2005-2015) instead of always computing trends over the full 2000-2023 period. The arrows recompute in real time as the range changes, which makes it possible to discover patterns that are invisible in the full-range view. For example, Iraq's coverage spiked during the war years and declined after, and Ukraine only becomes significant after 2014.
 
 The slider also supports keyboard control: arrow keys move the end year, shift+arrow moves the start year. The tooltip now shows a mini bar chart with the yearly front page share for the selected range and a dashed trendline.
 

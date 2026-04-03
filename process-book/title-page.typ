@@ -46,7 +46,7 @@
       ]
       #v(4mm)
       #text(size: 13pt, fill: rgb("e0e0e0"))[
-        COM-480 Data Visualization --- EPFL
+        COM-480 Data Visualization, EPFL
       ]
       #v(4mm)
       #text(size: 12pt, fill: rgb("8a8fa8"))[

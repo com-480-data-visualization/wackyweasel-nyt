@@ -8,13 +8,13 @@ I wanted to explore how the New York Times covers the world by analyzing geograp
 
 I converted the raw CSV (4.3 GB) to SQLite with a date index, which made all subsequent work fast and modular. Every new analysis reads from the same database and writes pre-computed JSON files that the browser loads directly, with no server-side processing.
 
-## World map - country mentions over time
+## World map: country mentions over time
 
 The first visualization is an animated choropleth showing per-year country mention frequency. I extract countries using a dictionary of ~200 names and aliases compiled into a single regex. About 31% of articles mention at least one country, with 150 countries detected in total. A log color scale turned out to be necessary because US mentions (~12k/year) are orders of magnitude above smaller countries.
 
 ## Design and technical choices
 
-I chose vanilla JS and D3.js v7 because I like working without frameworks - it keeps things simple and gives full control. The site uses static hosting only. The main challenges this week were handling the CSV scale, and choosing the right color scale for the map.
+I chose vanilla JS and D3.js v7 because I like working without frameworks. It keeps things simple and gives full control. The site uses static hosting only. The main challenges this week were handling the CSV scale, and choosing the right color scale for the map.
 
 ## AI disclosure
 
