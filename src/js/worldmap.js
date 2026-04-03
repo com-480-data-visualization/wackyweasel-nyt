@@ -1090,7 +1090,7 @@
             const rangeMin = trendRangeMinEl ? +trendRangeMinEl.value : 2000;
             const rangeMax = trendRangeMaxEl ? +trendRangeMaxEl.value : 2023;
             const chartYears = YEARS.filter(y => y >= Math.min(rangeMin, rangeMax) && y <= Math.max(rangeMin, rangeMax));
-            const chartValues = t.values;
+            const chartValues = t.values.slice(0, chartYears.length);
             const barColor = isStable ? 'rgba(136,136,136,0.5)' : (t.slope > 0 ? 'rgba(52,152,219,0.5)' : 'rgba(231,76,60,0.5)');
             const cw = 260, ch = 85, cm = { top: 8, right: 10, bottom: 18, left: 32 };
             const iw = cw - cm.left - cm.right, ih = ch - cm.top - cm.bottom;
