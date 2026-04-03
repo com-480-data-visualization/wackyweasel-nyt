@@ -18,16 +18,17 @@
     const HEADLINES_URL = 'src/data/processed/front_page_headlines.json';
 
     const NUMERIC_TO_ALPHA3 = {
-        "004": "AFG", "008": "ALB", "012": "DZA", "024": "AGO", "032": "ARG",
+        "004": "AFG", "008": "ALB", "010": "ATA", "012": "DZA", "024": "AGO", "032": "ARG",
         "036": "AUS", "040": "AUT", "031": "AZE", "044": "BHS", "048": "BHR",
-        "050": "BGD", "052": "BRB", "056": "BEL", "064": "BTN", "068": "BOL",
-        "070": "BIH", "072": "BWA", "076": "BRA", "096": "BRN", "100": "BGR",
+        "050": "BGD", "051": "ARM", "052": "BRB", "056": "BEL", "064": "BTN", "068": "BOL",
+        "070": "BIH", "072": "BWA", "076": "BRA", "084": "BLZ", "090": "SLB", "096": "BRN",
+        "100": "BGR", "112": "BLR",
         "854": "BFA", "108": "BDI", "116": "KHM", "120": "CMR", "124": "CAN",
         "140": "CAF", "148": "TCD", "152": "CHL", "156": "CHN", "170": "COL",
         "178": "COG", "180": "COD", "188": "CRI", "191": "HRV", "192": "CUB",
-        "196": "CYP", "203": "CZE", "208": "DNK", "262": "DJI", "214": "DOM",
-        "218": "ECU", "818": "EGY", "222": "SLV", "226": "GNQ", "232": "ERI",
-        "233": "EST", "231": "ETH", "242": "FJI", "246": "FIN", "250": "FRA",
+        "196": "CYP", "203": "CZE", "204": "BEN", "208": "DNK", "262": "DJI", "214": "DOM",
+        "218": "ECU", "818": "EGY", "222": "SLV", "226": "GNQ", "232": "ERI", "238": "FLK",
+        "233": "EST", "231": "ETH", "242": "FJI", "246": "FIN", "250": "FRA", "260": "ATF",
         "266": "GAB", "270": "GMB", "268": "GEO", "276": "DEU", "288": "GHA",
         "300": "GRC", "304": "GRL", "320": "GTM", "324": "GIN", "328": "GUY", "332": "HTI",
         "340": "HND", "348": "HUN", "352": "ISL", "356": "IND", "360": "IDN",
@@ -40,12 +41,13 @@
         "498": "MDA", "496": "MNG", "499": "MNE", "504": "MAR", "508": "MOZ",
         "104": "MMR", "516": "NAM", "524": "NPL", "528": "NLD", "554": "NZL",
         "558": "NIC", "562": "NER", "566": "NGA", "578": "NOR", "512": "OMN",
+        "540": "NCL", "548": "VUT",
         "586": "PAK", "591": "PAN", "598": "PNG", "600": "PRY", "604": "PER",
-        "608": "PHL", "616": "POL", "620": "PRT", "630": "PRI", "634": "QAT",
+        "608": "PHL", "616": "POL", "620": "PRT", "624": "GNB", "626": "TLS", "630": "PRI", "634": "QAT",
         "642": "ROU", "643": "RUS", "646": "RWA", "682": "SAU", "686": "SEN",
         "688": "SRB", "694": "SLE", "702": "SGP", "703": "SVK", "705": "SVN",
         "706": "SOM", "710": "ZAF", "728": "SSD", "724": "ESP", "144": "LKA",
-        "729": "SDN", "736": "SDN", "740": "SUR", "748": "SWZ", "752": "SWE", "756": "CHE",
+        "275": "PSE", "729": "SDN", "732": "ESH", "736": "SDN", "740": "SUR", "748": "SWZ", "752": "SWE", "756": "CHE",
         "760": "SYR", "158": "TWN", "762": "TJK", "834": "TZA", "764": "THA",
         "768": "TGO", "780": "TTO", "788": "TUN", "792": "TUR", "795": "TKM",
         "800": "UGA", "804": "UKR", "784": "ARE", "826": "GBR", "840": "USA",
@@ -53,11 +55,18 @@
         "894": "ZMB", "716": "ZWE", "-99": "XKX"
     };
 
+    const ALPHA3_TO_NAME = {
+        "ATA": "Antarctica", "ARM": "Armenia", "BLZ": "Belize", "SLB": "Solomon Islands",
+        "BLR": "Belarus", "BEN": "Benin", "FLK": "Falkland Islands", "ATF": "French Southern Territories",
+        "NCL": "New Caledonia", "VUT": "Vanuatu", "GNB": "Guinea-Bissau", "TLS": "Timor-Leste",
+        "PSE": "Palestine", "ESH": "Western Sahara", "GRL": "Greenland", "XKX": "Kosovo"
+    };
+
     // Mode definitions
     const MODES = ['title', 'cooccurrence', 'trend', 'year', 'us', 'us-ny', 'us-la', 'us-sf', 'exit'];
     const MODE_TITLES = {
         cooccurrence: 'Which Countries Share Headlines?',
-        trend: 'Who Makes the Front Page?',
+        trend: 'How Coverage Shifted Over Time',
         year: 'Who Makes the Front Page?',
         us: 'Where Does the NYT Report From?',
         'us-ny': 'New York City Metro',
@@ -77,10 +86,12 @@
     // Front page constants
     const SECTION = 'Front Page';
     const YEARS = d3.range(2000, 2025);
-    const ARROW_MIN = 14;
+    const ARROW_MIN = 3;
     const ARROW_MAX = 45;
     const COLOR_INCREASE = '#3498db';
     const COLOR_DECREASE = '#e74c3c';
+    const COLOR_STABLE = '#888';
+    const STABLE_THRESHOLD = 0.02; // slope/mean ratio below which trend is "stable"
     const NO_DATA_COLOR = '#2a3555';
     const TOP_N = 10;
 
@@ -110,6 +121,7 @@
     let trends = [];
     let maxAbsSlope = 1;
     let lengthScale;
+    let trendRangeMinEl, trendRangeMaxEl;
 
     // SVG layer groups
     let arcsGroup, arrowGroup, legend, bubblesGroup, statesGroup;
@@ -227,14 +239,14 @@
         });
 
         maxAbsSlope = d3.max(trends, d => d.absSlope) || 1;
-        lengthScale = d3.scaleSqrt()
+        lengthScale = d3.scaleLinear()
             .domain([0, maxAbsSlope])
             .range([ARROW_MIN, ARROW_MAX]);
 
         // Arrow markers (for trend/year modes)
         const defs = svg.append('defs');
-        ['increase', 'decrease', 'year'].forEach(type => {
-            const color = type === 'decrease' ? COLOR_DECREASE : COLOR_INCREASE;
+        ['increase', 'decrease', 'stable', 'year'].forEach(type => {
+            const color = type === 'decrease' ? COLOR_DECREASE : type === 'stable' ? COLOR_STABLE : COLOR_INCREASE;
             defs.append('marker')
                 .attr('id', `arrow-${type}`)
                 .attr('viewBox', '0 0 10 10')
@@ -630,6 +642,66 @@
             });
         });
 
+        // Trend range slider
+        trendRangeMinEl = document.getElementById('trend-range-min');
+        trendRangeMaxEl = document.getElementById('trend-range-max');
+        const trendRangeLabel = document.getElementById('trend-range-label');
+
+        function recomputeTrends(minYear, maxYear) {
+            const subYears = YEARS.filter(y => y >= minYear && y <= maxYear);
+            if (subYears.length < 2) return;
+
+            trends.length = 0;
+            topoCountries.forEach(f => {
+                const iso3 = NUMERIC_TO_ALPHA3[f.id] || f.id;
+                const centroid = centroids[iso3];
+                if (!centroid) return;
+                const c = sectionLookup[iso3];
+                if (!c || !c.by_section[SECTION]) return;
+                const sectionData = c.by_section[SECTION];
+                const values = subYears.map(y => {
+                    const yi = yearToIndex[y];
+                    return yi !== undefined ? (sectionData[yi] || 0) : 0;
+                });
+                const total = d3.sum(values);
+                if (total === 0) return;
+                const slope = linregSlope(values);
+                trends.push({
+                    iso3, name: c.name, centroid, slope, total,
+                    absSlope: Math.abs(slope), values
+                });
+            });
+            maxAbsSlope = d3.max(trends, d => d.absSlope) || 1;
+            lengthScale = d3.scaleLinear()
+                .domain([0, maxAbsSlope])
+                .range([ARROW_MIN, ARROW_MAX]);
+        }
+
+        if (trendRangeMinEl && trendRangeMaxEl) {
+            function updateRangeTrack() {
+                const min = 2000, max = 2023;
+                let lo = +trendRangeMinEl.value, hi = +trendRangeMaxEl.value;
+                if (lo > hi) { const tmp = lo; lo = hi; hi = tmp; }
+                const pctLo = ((lo - min) / (max - min)) * 100;
+                const pctHi = ((hi - min) / (max - min)) * 100;
+                const active = 'rgba(52, 152, 219, 0.5)';
+                const inactive = 'rgba(52, 152, 219, 0.05)';
+                trendRangeMinEl.style.background = `linear-gradient(to right, ${inactive} ${pctLo}%, ${active} ${pctLo}%, ${active} ${pctHi}%, ${inactive} ${pctHi}%)`;
+            }
+            function updateTrendRange() {
+                let minVal = +trendRangeMinEl.value;
+                let maxVal = +trendRangeMaxEl.value;
+                if (minVal > maxVal) { const tmp = minVal; minVal = maxVal; maxVal = tmp; }
+                if (trendRangeLabel) trendRangeLabel.textContent = `${minVal} - ${maxVal}`;
+                updateRangeTrack();
+                recomputeTrends(minVal, maxVal);
+                if (currentMode === 'trend') drawTrendArrows(false);
+            }
+            trendRangeMinEl.addEventListener('input', updateTrendRange);
+            trendRangeMaxEl.addEventListener('input', updateTrendRange);
+            updateRangeTrack();
+        }
+
         // Year slider
         const yearSlider = document.getElementById('world-year-slider');
         if (yearSlider) {
@@ -709,6 +781,8 @@
             if (desc) desc.style.opacity = '0';
             const yearControls = document.getElementById('world-year-controls');
             if (yearControls) yearControls.style.opacity = '0';
+            const trendControls2 = document.getElementById('world-trend-controls');
+            if (trendControls2) trendControls2.style.opacity = '0';
             const dots = document.querySelector('.mode-dots');
             if (dots) dots.style.opacity = '0';
             tooltip.style('opacity', 0);
@@ -777,6 +851,11 @@
         if (yearControls) {
             yearControls.style.opacity = mode === 'year' ? '1' : '0';
             yearControls.style.pointerEvents = mode === 'year' ? 'auto' : 'none';
+        }
+        const trendControls = document.getElementById('world-trend-controls');
+        if (trendControls) {
+            trendControls.style.opacity = mode === 'trend' ? '1' : '0';
+            trendControls.style.pointerEvents = mode === 'trend' ? 'auto' : 'none';
         }
 
         // Show/hide connection panel
@@ -922,6 +1001,20 @@
             if (headlineTimer) { clearTimeout(headlineTimer); headlineTimer = null; }
             tooltip.style('opacity', 0);
             drawYearHeatmap(currentYear, false);
+        } else if (currentMode === 'trend' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+            e.preventDefault();
+            if (!trendRangeMinEl || !trendRangeMaxEl) return;
+            const delta = e.key === 'ArrowRight' ? 1 : -1;
+            if (e.shiftKey) {
+                // Shift + arrow: move start year
+                const newVal = Math.max(2000, Math.min(2023, +trendRangeMinEl.value + delta));
+                trendRangeMinEl.value = newVal;
+            } else {
+                // Arrow only: move end year
+                const newVal = Math.max(2000, Math.min(2023, +trendRangeMaxEl.value + delta));
+                trendRangeMaxEl.value = newVal;
+            }
+            trendRangeMinEl.dispatchEvent(new Event('input'));
         }
     }
 
@@ -942,7 +1035,7 @@
         const iso3 = NUMERIC_TO_ALPHA3[d.id] || d.id;
         d3.select(this).classed('country-hover', true);
 
-        const countryName = mentionLookup[iso3] ? mentionLookup[iso3].name : iso3;
+        const countryName = mentionLookup[iso3] ? mentionLookup[iso3].name : (ALPHA3_TO_NAME[iso3] || iso3);
 
         if (currentMode === 'cooccurrence') {
             if (!coocData || !coocData[iso3]) {
@@ -957,12 +1050,47 @@
                 tooltip.style('opacity', 1).html(`<strong>${countryName}</strong><br><span style="opacity:0.5">No front page data</span>`);
                 return;
             }
-            const dir = t.slope > 0 ? 'Increasing' : 'Decreasing';
-            const color = t.slope > 0 ? COLOR_INCREASE : COLOR_DECREASE;
+            const tMean = t.total / t.values.length;
+            const isStable = tMean > 0 ? (t.absSlope / tMean) < STABLE_THRESHOLD : true;
+            const dir = isStable ? 'Stable' : (t.slope > 0 ? 'Increasing' : 'Decreasing');
+            const color = isStable ? COLOR_STABLE : (t.slope > 0 ? COLOR_INCREASE : COLOR_DECREASE);
+            const avgPct = (t.total / t.values.length).toFixed(2);
             tooltip.style('opacity', 1)
                 .html(`<strong>${t.name}</strong><br>` +
-                    `Total front page mentions: ${t.total.toLocaleString()}<br>` +
-                    `Trend: <span style="color:${color};font-weight:600">${dir}</span>`);
+                    `Avg. front page share: ${avgPct}%<br>` +
+                    `Trend: <span style="color:${color};font-weight:600">${dir}</span> (${t.slope > 0 ? '+' : ''}${t.slope.toFixed(3)}/yr)`);
+            // Mini bar chart with trendline (uses current range)
+            const rangeMin = trendRangeMinEl ? +trendRangeMinEl.value : 2000;
+            const rangeMax = trendRangeMaxEl ? +trendRangeMaxEl.value : 2023;
+            const chartYears = YEARS.filter(y => y >= Math.min(rangeMin, rangeMax) && y <= Math.max(rangeMin, rangeMax));
+            const chartValues = t.values; // already computed for the range
+            const cw = 240, ch = 70, cm = { top: 4, right: 4, bottom: 14, left: 4 };
+            const iw = cw - cm.left - cm.right, ih = ch - cm.top - cm.bottom;
+            const chartSvg = tooltip.append('svg').attr('width', cw).attr('height', ch).style('display', 'block').style('margin-top', '6px');
+            const cg = chartSvg.append('g').attr('transform', `translate(${cm.left},${cm.top})`);
+            const cx = d3.scaleBand().domain(chartYears).range([0, iw]).padding(0.15);
+            const cy = d3.scaleLinear().domain([0, d3.max(chartValues) || 0.001]).range([ih, 0]);
+            cg.selectAll('rect').data(chartValues).join('rect')
+                .attr('x', (_, i) => cx(chartYears[i]))
+                .attr('y', d => cy(d))
+                .attr('width', cx.bandwidth())
+                .attr('height', d => ih - cy(d))
+                .attr('fill', isStable ? 'rgba(136,136,136,0.5)' : (t.slope > 0 ? 'rgba(52,152,219,0.5)' : 'rgba(231,76,60,0.5)'));
+            // Trendline
+            const n = chartValues.length;
+            const yStart = d3.mean(chartValues.slice(0, Math.max(1, Math.ceil(n * 0.15))));
+            const yEnd = d3.mean(chartValues.slice(-Math.max(1, Math.ceil(n * 0.15))));
+            cg.append('line')
+                .attr('x1', 0).attr('y1', cy(yStart))
+                .attr('x2', iw).attr('y2', cy(yEnd))
+                .attr('stroke', color).attr('stroke-width', 1.5).attr('stroke-dasharray', '4,2');
+            // Year labels
+            [0, Math.floor(n / 2), n - 1].forEach(i => {
+                if (i >= n) return;
+                cg.append('text').attr('x', cx(chartYears[i]) + cx.bandwidth() / 2).attr('y', ih + 11)
+                    .attr('text-anchor', 'middle').attr('font-size', '8px').attr('fill', '#999')
+                    .text(chartYears[i]);
+            });
         } else if (currentMode === 'year') {
             const t = trends.find(tr => tr.iso3 === iso3);
             if (!t) {
@@ -1343,12 +1471,14 @@
             .join('line')
             .each(function (d) {
                 const len = lengthScale(d.absSlope);
-                const angle = d.slope > 0 ? -45 : 45;
+                const dMean = d.total / d.values.length;
+                const isStable = dMean > 0 ? (d.absSlope / dMean) < STABLE_THRESHOLD : true;
+                const angle = isStable ? 0 : (d.slope > 0 ? -45 : 45);
                 const rad = angle * Math.PI / 180;
                 const dx = Math.cos(rad) * len / 2;
                 const dy = Math.sin(rad) * len / 2;
-                const color = d.slope > 0 ? COLOR_INCREASE : COLOR_DECREASE;
-                const markerType = d.slope > 0 ? 'increase' : 'decrease';
+                const color = isStable ? COLOR_STABLE : (d.slope > 0 ? COLOR_INCREASE : COLOR_DECREASE);
+                const markerType = isStable ? 'stable' : (d.slope > 0 ? 'increase' : 'decrease');
 
                 const sel = d3.select(this)
                     .attr('stroke', color)
@@ -1388,12 +1518,14 @@
         const yi = YEARS.indexOf(year);
         if (yi < 0) return;
 
-        // Build lookup: iso3 → mention count for this year
+        // Build lookup from original section data (not trend-range-filtered values)
         const valByCountry = {};
         let maxVal = 0;
-        trends.forEach(d => {
-            const val = d.values[yi] || 0;
-            valByCountry[d.iso3] = val;
+        Object.entries(sectionLookup).forEach(([iso3, c]) => {
+            if (!c.by_section[SECTION]) return;
+            const sectionData = c.by_section[SECTION];
+            const val = yearToIndex[year] !== undefined ? (sectionData[yearToIndex[year]] || 0) : 0;
+            valByCountry[iso3] = val;
             if (val > maxVal) maxVal = val;
         });
 

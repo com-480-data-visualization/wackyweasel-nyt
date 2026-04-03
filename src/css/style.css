@@ -173,28 +173,133 @@ section h2 {
     pointer-events: none;
 }
 
-#world-year-controls {
+#slider-wrapper {
+    position: relative;
+    height: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+#world-year-controls, #world-trend-controls {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 10px;
-    margin-bottom: 1rem;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s;
 }
 
+.range-slider {
+    position: relative;
+    width: 400px;
+    max-width: 50vw;
+    height: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.range-slider input[type="range"] {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: transparent;
+    pointer-events: none;
+    outline: none;
+    margin: 0;
+    padding: 0;
+}
+
+.range-slider input[type="range"]:first-child {
+    background: rgba(52, 152, 219, 0.3);
+    border-radius: 2px;
+}
+
+.range-slider input[type="range"]::-moz-range-track {
+    height: 4px;
+    border-radius: 2px;
+}
+
+.range-slider input[type="range"]:first-child::-moz-range-track {
+    background: rgba(52, 152, 219, 0.3);
+}
+
+.range-slider input[type="range"]:last-child::-moz-range-track {
+    background: transparent;
+}
+
+.range-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    pointer-events: auto;
+}
+
+.range-slider input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    pointer-events: auto;
+}
+
 #world-year-slider {
     width: 400px;
     max-width: 50vw;
-    accent-color: var(--blue);
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: rgba(52, 152, 219, 0.3);
+    border-radius: 2px;
+    outline: none;
 }
 
-#world-year-label {
+#world-year-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+#world-year-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+#world-year-slider::-moz-range-track {
+    height: 4px;
+    background: rgba(52, 152, 219, 0.3);
+    border-radius: 2px;
+}
+
+#world-year-label, #trend-range-label {
     font-size: 1.3rem;
     font-weight: 700;
     color: var(--primary);
-    min-width: 50px;
+    width: 130px;
+    text-align: left;
+    white-space: nowrap;
 }
 
 #world-tooltip {
@@ -528,6 +633,7 @@ section h2 .typewriter-cursor {
 }
 .mode-dot { touch-action: manipulation; }
 #world-year-slider { touch-action: manipulation; }
+.range-slider input[type="range"] { touch-action: manipulation; }
 
 /* Responsive */
 @media (max-width: 768px) {
@@ -546,15 +652,23 @@ section h2 .typewriter-cursor {
         justify-content: space-between;
     }
     section h2 {
-        padding: 0.6rem 0.6rem 0;
+        padding: 0.8rem 1rem 0.2rem;
         margin-bottom: 0;
         font-size: 1rem;
     }
     #world-description {
-        padding: 0 0.6rem;
+        padding: 0.2rem 1rem 0.4rem;
         margin-bottom: 0;
         min-height: 0;
-        font-size: 0.75rem;
+        font-size: 0.8rem;
+        line-height: 1.4;
+    }
+    #slider-wrapper {
+        margin: 0.3rem 0;
+    }
+    .range-slider {
+        width: 100%;
+        max-width: 60vw;
     }
     #world-visualization h2 { min-height: 0; }
 
@@ -583,9 +697,31 @@ section h2 .typewriter-cursor {
     .mode-dots { gap: 12px; padding: 8px 0; }
     .mode-dot { width: 16px; height: 16px; }
 
-    /* Year slider full-width */
-    #world-year-slider { width: 100%; max-width: 80vw; height: 32px; }
-    #world-year-label { font-size: 1.1rem; }
+    /* Sliders: uniform style on mobile */
+    #slider-wrapper {
+        padding: 0 1rem;
+        display: flex;
+        justify-content: center;
+    }
+    #world-year-controls, #world-trend-controls {
+        justify-content: center;
+    }
+    #world-year-slider, .range-slider input[type="range"] {
+        height: 3px;
+    }
+    #world-year-slider { width: 100%; max-width: 65vw; }
+    .range-slider { width: 100%; max-width: 65vw; }
+    #world-year-slider::-webkit-slider-thumb,
+    .range-slider input[type="range"]::-webkit-slider-thumb {
+        width: 24px;
+        height: 24px;
+    }
+    #world-year-slider::-moz-range-thumb,
+    .range-slider input[type="range"]::-moz-range-thumb {
+        width: 24px;
+        height: 24px;
+    }
+    #world-year-label, #trend-range-label { font-size: 0.9rem; width: 100px; }
 
     /* Tooltip: fixed bottom bar, above mode dots */
     .tooltip {

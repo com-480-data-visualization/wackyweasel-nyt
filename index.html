@@ -16,7 +16,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="src/css/style.css">
+    <link rel="stylesheet" href="src/css/style.css?v=2">
 </head>
 <body>
     <!-- Fixed background dot map -->
@@ -36,9 +36,18 @@
         <section id="world-visualization">
             <h2 data-managed="true">Which Countries Share Headlines?</h2>
             <p id="world-description">Countries that appear together in NYT articles. Hover over a country to see its connections.</p>
-            <div id="world-year-controls">
-                <input type="range" id="world-year-slider" min="2000" max="2023" value="2000">
-                <span id="world-year-label">2000</span>
+            <div id="slider-wrapper">
+                <div id="world-year-controls">
+                    <input type="range" id="world-year-slider" min="2000" max="2023" value="2000">
+                    <span id="world-year-label">2000</span>
+                </div>
+                <div id="world-trend-controls">
+                    <div class="range-slider">
+                        <input type="range" id="trend-range-min" min="2000" max="2023" value="2000">
+                        <input type="range" id="trend-range-max" min="2000" max="2023" value="2023">
+                    </div>
+                    <span id="trend-range-label">2000 - 2023</span>
+                </div>
             </div>
             <div id="world-container">
                 <svg id="world-svg"></svg>
@@ -81,7 +90,7 @@
 
     <!-- Custom JavaScript -->
     <script src="src/js/typewriter.js"></script>
-    <script src="src/js/worldmap.js"></script>
+    <script src="src/js/worldmap.js?v=2"></script>
     <!-- <script src="src/js/wordcount.js"></script> -->
 
     <!-- Typewriter effect on section titles + descriptions -->
