@@ -25,11 +25,8 @@ The trend arrow map and US city bubble map both received animated sparkline tool
 ## Data normalization
 
 Investigating the trend arrows revealed that almost every country showed decreasing coverage. This turned out to be because the NYT published roughly 110,000 articles per year in the early 2000s but only around 50,000 in recent years. I updated all preprocessing to normalize counts as a percentage of total articles per year. For consistency, dates 2024 and 2025 are excluded from all data throughout this report.
-
-I also switched country extraction from scanning all text fields to headlines only, since the abstract and snippet fields inflated co-occurrence counts by repeating the same information.
-
 ## AI disclosure
 
-- Typewriter effect with typo simulation was AI-assisted
+- Typewriter effect with typo simulation was fully AI-orchestrated
 - Co-occurrence hover interaction and sparkline tooltips were AI-assisted
 - Data normalization pipeline was AI-assisted

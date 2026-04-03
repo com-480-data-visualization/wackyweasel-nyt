@@ -52,6 +52,9 @@ COUNTRY_ALIASES = {
     "jamaica": ("JAM", "Jamaica"),
     "puerto rico": ("PRI", "Puerto Rico"),
     "trinidad and tobago": ("TTO", "Trinidad and Tobago"),
+    "barbados": ("BRB", "Barbados"),
+    "bahamas": ("BHS", "Bahamas"),
+    "belize": ("BLZ", "Belize"),
 
     # South America
     "brazil": ("BRA", "Brazil"),
@@ -67,6 +70,10 @@ COUNTRY_ALIASES = {
     "ecuador": ("ECU", "Ecuador"),
     "bolivia": ("BOL", "Bolivia"),
     "paraguay": ("PRY", "Paraguay"),
+    "suriname": ("SUR", "Suriname"),
+    "guyana": ("GUY", "Guyana"),
+    "falkland islands": ("FLK", "Falkland Islands"),
+    "falklands": ("FLK", "Falkland Islands"),
     "uruguay": ("URY", "Uruguay"),
 
     # Western Europe
@@ -284,6 +291,20 @@ COUNTRY_ALIASES = {
     "new zealand": ("NZL", "New Zealand"),
     "papua new guinea": ("PNG", "Papua New Guinea"),
     "fiji": ("FJI", "Fiji"),
+    "solomon islands": ("SLB", "Solomon Islands"),
+    "vanuatu": ("VUT", "Vanuatu"),
+    "new caledonia": ("NCL", "New Caledonia"),
+
+    # Antarctica
+    "antarctica": ("ATA", "Antarctica"),
+    "antarctic": ("ATA", "Antarctica"),
+
+    # Other territories
+    "timor-leste": ("TLS", "Timor-Leste"),
+    "east timor": ("TLS", "Timor-Leste"),
+    "western sahara": ("ESH", "Western Sahara"),
+    "guinea-bissau": ("GNB", "Guinea-Bissau"),
+    "benin": ("BEN", "Benin"),
 
     # Other
     "greece": ("GRC", "Greece"),
@@ -334,7 +355,7 @@ def main():
 
     conn = sqlite3.connect(str(DB_FILE))
     cursor = conn.execute(
-        "SELECT pub_date_parsed, abstract, snippet, keywords FROM articles "
+        "SELECT pub_date_parsed, headline, abstract, snippet, keywords FROM articles "
         "WHERE pub_date_parsed IS NOT NULL "
         "ORDER BY pub_date_parsed"
     )
@@ -347,7 +368,7 @@ def main():
     matched = 0
 
     for row in cursor:
-        pub_date, abstract, snippet, keywords_str = row
+        pub_date, headline_str, abstract, snippet, keywords_str = row
 
         if not pub_date or len(pub_date) < 4:
             continue
@@ -363,6 +384,15 @@ def main():
 
         # Combine text fields
         text_parts = []
+        if headline_str:
+            try:
+                hl = json.loads(headline_str.replace("'", '"'))
+                if isinstance(hl, dict):
+                    text_parts.append(hl.get('main', ''))
+                else:
+                    text_parts.append(str(hl))
+            except (json.JSONDecodeError, ValueError):
+                text_parts.append(str(headline_str))
         if abstract:
             text_parts.append(abstract)
         if snippet:

@@ -91,7 +91,7 @@
     const COLOR_INCREASE = '#3498db';
     const COLOR_DECREASE = '#e74c3c';
     const COLOR_STABLE = '#888';
-    const STABLE_THRESHOLD = 0.02; // slope/mean ratio below which trend is "stable"
+    const STABLE_THRESHOLD = 0.01; // slope/mean ratio below which trend is "stable"
     const NO_DATA_COLOR = '#2a3555';
     const TOP_N = 10;
 
@@ -122,6 +122,9 @@
     let maxAbsSlope = 1;
     let lengthScale;
     let trendRangeMinEl, trendRangeMaxEl;
+    let fpTotalByYear = [];
+    let tappedCountryIso = null;
+    let tappedCountryEl = null;
 
     // SVG layer groups
     let arcsGroup, arrowGroup, legend, bubblesGroup, statesGroup;
@@ -213,7 +216,17 @@
             geoCentroids[iso3] = d3.geoCentroid(f);
         });
 
-        // Compute trend data for front page modes
+        // Compute total front page articles per year (for normalization)
+        fpTotalByYear = YEARS.map(y => {
+            const yi = yearToIndex[y];
+            let sum = 0;
+            Object.values(sectionLookup).forEach(c => {
+                if (c.by_section[SECTION] && yi !== undefined) sum += (c.by_section[SECTION][yi] || 0);
+            });
+            return sum || 1; // avoid division by zero
+        });
+
+        // Compute trend data for front page modes (normalized by yearly total)
         topoCountries.forEach(f => {
             const iso3 = NUMERIC_TO_ALPHA3[f.id] || f.id;
             const centroid = centroids[iso3];
@@ -223,10 +236,12 @@
             if (!c || !c.by_section[SECTION]) return;
 
             const sectionData = c.by_section[SECTION];
-            const values = YEARS.map(y => {
+            const rawValues = YEARS.map(y => {
                 const yi = yearToIndex[y];
                 return yi !== undefined ? (sectionData[yi] || 0) : 0;
             });
+            // Normalize: percentage of front page articles that mention this country
+            const values = rawValues.map((v, i) => (v / fpTotalByYear[i]) * 100);
 
             const total = d3.sum(values);
             if (total === 0) return;
@@ -358,8 +373,6 @@
 
         // Mobile touch handlers for countries and bubbles
         if (isMobile) {
-            let tappedCountryIso = null;
-            let tappedCountryEl = null;
 
             svg.selectAll('.country').on('touchstart', function (event, d) {
                 event.stopPropagation();
@@ -659,10 +672,12 @@
                 const c = sectionLookup[iso3];
                 if (!c || !c.by_section[SECTION]) return;
                 const sectionData = c.by_section[SECTION];
-                const values = subYears.map(y => {
+                const rawValues = subYears.map(y => {
                     const yi = yearToIndex[y];
                     return yi !== undefined ? (sectionData[yi] || 0) : 0;
                 });
+                const subFpTotals = subYears.map(y => fpTotalByYear[YEARS.indexOf(y)] || 1);
+                const values = rawValues.map((v, i) => (v / subFpTotals[i]) * 100);
                 const total = d3.sum(values);
                 if (total === 0) return;
                 const slope = linregSlope(values);
@@ -696,6 +711,11 @@
                 updateRangeTrack();
                 recomputeTrends(minVal, maxVal);
                 if (currentMode === 'trend') drawTrendArrows(false);
+                // Refresh tooltip if a country is selected (mobile)
+                if (tappedCountryEl) {
+                    const d = d3.select(tappedCountryEl).datum();
+                    handleMouseOver.call(tappedCountryEl, {}, d);
+                }
             }
             trendRangeMinEl.addEventListener('input', updateTrendRange);
             trendRangeMaxEl.addEventListener('input', updateTrendRange);
@@ -710,8 +730,14 @@
                 currentYear = +yearSlider.value;
                 document.getElementById('world-year-label').textContent = currentYear;
                 if (headlineTimer) { clearTimeout(headlineTimer); headlineTimer = null; }
-                tooltip.style('opacity', 0);
                 drawYearHeatmap(currentYear, false);
+                // Refresh tooltip if a country is selected (mobile)
+                if (tappedCountryEl) {
+                    const d = d3.select(tappedCountryEl).datum();
+                    handleMouseOver.call(tappedCountryEl, {}, d);
+                } else {
+                    tooltip.style('opacity', 0);
+                }
             });
             // Block up/down on the slider so they don't change the value
             yearSlider.addEventListener('keydown', (e) => {
@@ -759,6 +785,13 @@
         const header = document.querySelector('header');
         const bgMap = document.getElementById('bg-map');
         const exitPage = document.getElementById('exit-page');
+        // Hide precision button on non-US modes
+        const precisionToggle = document.getElementById('precision-toggle');
+        if (precisionToggle && isMobile) {
+            const isUS = mode === 'us' || mode.startsWith('us-');
+            precisionToggle.style.display = isUS ? 'block' : 'none';
+        }
+
         if (mode === 'title') {
             currentMode = mode;
             if (header) { header.style.opacity = '1'; header.style.pointerEvents = ''; }
@@ -868,12 +901,6 @@
         });
 
         const isUSMode = mode === 'us' || mode.startsWith('us-');
-
-        // Show/hide precision toggle on mobile US modes
-        const precisionBtn = document.getElementById('precision-toggle');
-        if (precisionBtn && isMobile) {
-            precisionBtn.style.display = isUSMode ? 'block' : 'none';
-        }
 
         if (isUSMode) {
             // Reset country colors from heatmap (don't restore fill-opacity, handled per sub-mode below)
@@ -1054,59 +1081,76 @@
             const isStable = tMean > 0 ? (t.absSlope / tMean) < STABLE_THRESHOLD : true;
             const dir = isStable ? 'Stable' : (t.slope > 0 ? 'Increasing' : 'Decreasing');
             const color = isStable ? COLOR_STABLE : (t.slope > 0 ? COLOR_INCREASE : COLOR_DECREASE);
-            const avgPct = (t.total / t.values.length).toFixed(2);
+            const avgShare = (t.total / t.values.length).toFixed(2);
             tooltip.style('opacity', 1)
                 .html(`<strong>${t.name}</strong><br>` +
-                    `Avg. front page share: ${avgPct}%<br>` +
-                    `Trend: <span style="color:${color};font-weight:600">${dir}</span> (${t.slope > 0 ? '+' : ''}${t.slope.toFixed(3)}/yr)`);
+                    `Avg. front page share: ${avgShare}%<br>` +
+                    `Trend: <span style="color:${color};font-weight:600">${dir}</span>`);
             // Mini bar chart with trendline (uses current range)
             const rangeMin = trendRangeMinEl ? +trendRangeMinEl.value : 2000;
             const rangeMax = trendRangeMaxEl ? +trendRangeMaxEl.value : 2023;
             const chartYears = YEARS.filter(y => y >= Math.min(rangeMin, rangeMax) && y <= Math.max(rangeMin, rangeMax));
-            const chartValues = t.values; // already computed for the range
-            const cw = 240, ch = 70, cm = { top: 4, right: 4, bottom: 14, left: 4 };
+            const chartValues = t.values;
+            const barColor = isStable ? 'rgba(136,136,136,0.5)' : (t.slope > 0 ? 'rgba(52,152,219,0.5)' : 'rgba(231,76,60,0.5)');
+            const cw = 260, ch = 85, cm = { top: 8, right: 10, bottom: 18, left: 32 };
             const iw = cw - cm.left - cm.right, ih = ch - cm.top - cm.bottom;
             const chartSvg = tooltip.append('svg').attr('width', cw).attr('height', ch).style('display', 'block').style('margin-top', '6px');
             const cg = chartSvg.append('g').attr('transform', `translate(${cm.left},${cm.top})`);
             const cx = d3.scaleBand().domain(chartYears).range([0, iw]).padding(0.15);
             const cy = d3.scaleLinear().domain([0, d3.max(chartValues) || 0.001]).range([ih, 0]);
+            // Y gridlines + labels
+            cy.ticks(3).forEach(v => {
+                cg.append('line')
+                    .attr('x1', 0).attr('x2', iw)
+                    .attr('y1', cy(v)).attr('y2', cy(v))
+                    .attr('stroke', '#2a3555').attr('stroke-width', 0.5);
+                const label = v < 1 ? v.toFixed(2) : v < 10 ? v.toFixed(1) : Math.round(v);
+                cg.append('text')
+                    .attr('x', -4).attr('y', cy(v) + 3)
+                    .attr('text-anchor', 'end')
+                    .attr('font-size', '8px').attr('fill', '#6a7088')
+                    .text(label + '%');
+            });
+            // Bars (animated grow from bottom)
+            const n = chartValues.length;
             cg.selectAll('rect').data(chartValues).join('rect')
                 .attr('x', (_, i) => cx(chartYears[i]))
-                .attr('y', d => cy(d))
+                .attr('y', ih)
                 .attr('width', cx.bandwidth())
-                .attr('height', d => ih - cy(d))
-                .attr('fill', isStable ? 'rgba(136,136,136,0.5)' : (t.slope > 0 ? 'rgba(52,152,219,0.5)' : 'rgba(231,76,60,0.5)'));
-            // Trendline
-            const n = chartValues.length;
+                .attr('height', 0)
+                .attr('fill', barColor)
+                .transition().duration(400).delay((_, i) => i * 15)
+                .attr('y', d => cy(d))
+                .attr('height', d => ih - cy(d));
+            // Trendline (animated draw)
             const yStart = d3.mean(chartValues.slice(0, Math.max(1, Math.ceil(n * 0.15))));
             const yEnd = d3.mean(chartValues.slice(-Math.max(1, Math.ceil(n * 0.15))));
-            cg.append('line')
+            const trendLine = cg.append('line')
                 .attr('x1', 0).attr('y1', cy(yStart))
-                .attr('x2', iw).attr('y2', cy(yEnd))
+                .attr('x2', 0).attr('y2', cy(yStart))
                 .attr('stroke', color).attr('stroke-width', 1.5).attr('stroke-dasharray', '4,2');
-            // Year labels
+            trendLine.transition().duration(600).delay(n * 15)
+                .attr('x2', iw).attr('y2', cy(yEnd));
+            // X-axis year labels
             [0, Math.floor(n / 2), n - 1].forEach(i => {
                 if (i >= n) return;
-                cg.append('text').attr('x', cx(chartYears[i]) + cx.bandwidth() / 2).attr('y', ih + 11)
+                cg.append('text').attr('x', cx(chartYears[i]) + cx.bandwidth() / 2).attr('y', ih + 13)
                     .attr('text-anchor', 'middle').attr('font-size', '8px').attr('fill', '#999')
                     .text(chartYears[i]);
             });
         } else if (currentMode === 'year') {
-            const t = trends.find(tr => tr.iso3 === iso3);
-            if (!t) {
+            const c = sectionLookup[iso3];
+            if (!c || !c.by_section[SECTION]) {
                 tooltip.style('opacity', 1).html(`<strong>${countryName}</strong> (${currentYear})<br><span style="opacity:0.5">No front page data</span>`);
                 return;
             }
             const yi = yearToIndex[currentYear];
-            const val = yi !== undefined ? (t.values[YEARS.indexOf(currentYear)] || 0) : 0;
-            const totalYear = Object.values(sectionLookup).reduce((sum, c) => {
-                if (!c.by_section[SECTION]) return sum;
-                return sum + (c.by_section[SECTION][yi] || 0);
-            }, 0);
-            const pct = totalYear > 0 ? (val / totalYear * 100).toFixed(1) : '0.0';
+            const val = yi !== undefined ? (c.by_section[SECTION][yi] || 0) : 0;
+            const totalYear = fpTotalByYear[YEARS.indexOf(currentYear)] || 1;
+            const pct = (val / totalYear * 100).toFixed(1);
 
             tooltip.style('opacity', 1)
-                .html(`<strong>${t.name}</strong> (${currentYear})<br>` +
+                .html(`<strong>${countryName}</strong> (${currentYear})<br>` +
                     `Front page mentions: ${val.toLocaleString()}<br>` +
                     `Share: ${pct}%` +
                     `<div class="headline-line"></div>` +

@@ -4,7 +4,7 @@
 
 I wanted to create a different kind of map - the NYT itself often uses tile grid cartograms in their own visualizations, so it felt fitting. The tile grid gives every country an equal-sized square arranged in a layout that loosely preserves geographic adjacency, which avoids the problem of small countries being invisible on a geographic map. I used tile positions from the [Tile-Grid-Map](https://github.com/mustafasaifee42/Tile-Grid-Map) repository, which provides grid coordinates for 192 countries.
 
-Each cell shows the average article word count for that country, colored on a sequential scale. Hover tooltips show the country name, average word count, and total article count. This feature was later dismissed as it did not fit nicely into the scroll-driven flow of the final visualization.
+Each cell shows the average article word count for that country, colored on a sequential scale with a gradient color legend at the bottom. Hover tooltips show the country name, average word count, and total article count. This feature was later dismissed as it did not fit nicely into the scroll-driven flow of the final visualization.
 
 ## Small multiples - 25 yearly maps
 

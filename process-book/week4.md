@@ -23,3 +23,4 @@ I also started working on the co-occurrence map, which shows which countries are
 ## AI disclosure
 
 - The trend computation (linear regression) was AI-assisted
+- Arrow positioning and SVG marker placement were buggy initially and fixed with AI assistance

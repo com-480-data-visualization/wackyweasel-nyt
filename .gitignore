@@ -4,6 +4,7 @@
 # Whitelist: project files
 !.gitignore
 !README.md
+!Dockerfile
 !MILESTONE1.md
 !MILESTONE2.md
 !MILESTONE1.pdf
@@ -11,6 +12,7 @@
 !eda_article_counts.png
 !images/
 !images/*.png
+!images/*.svg
 !index.html
 
 # Whitelist: source
@@ -27,6 +29,8 @@
 !process-book/
 !process-book/*.md
 !process-book/*.pdf
+!process-book/*.typ
+!process-book/*.sh
 
 # Whitelist: scripts
 !scripts/

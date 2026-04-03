@@ -34,3 +34,32 @@ python3 -m http.server 8000
 ```
 
 No build step, no npm, no bundler. Scroll or use arrow keys to navigate between visualization modes. On mobile, tap the navigation dots at the bottom.
+
+### Preprocessing
+
+The preprocessed JSON files are included in the repo. To regenerate from the SQLite database (download from Polybox link above):
+
+```bash
+# Country mentions + co-occurrence (~8-10 min)
+python3 scripts/preprocess_countries.py
+
+# Country mentions by section (~8-10 min)
+python3 scripts/preprocess_country_sections.py
+
+# Front page headlines per country/year (~2 min)
+python3 scripts/preprocess_headlines.py
+
+# US city mentions from glocations keywords (~1 min)
+python3 scripts/preprocess_cities.py
+
+# CSV to SQLite (only needed once if starting from raw CSV)
+python3 scripts/csv_to_sqlite.py
+```
+
+### Controls
+
+- **Scroll / Arrow keys**: Navigate between visualization modes
+- **Hover** (desktop): Show country tooltips, co-occurrence arcs, sparklines
+- **Tap** (mobile): Same interactions adapted for touch
+- **Year slider** (heatmap mode): Scrub through 2000-2023, left/right arrow keys
+- **Range slider** (trend mode): Select year range for trend computation, shift+arrows for start year

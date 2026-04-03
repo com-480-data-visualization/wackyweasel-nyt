@@ -1,22 +1,26 @@
 # Week 7 - March 30 - April 5, 2026
 
-## Co-occurrence map - hover interaction
+## Unified world map
 
-I reworked the co-occurrence map from the automated animation to a hover-triggered interaction. The map now responds to the user hovering over a country, drawing connection arcs to the top 10 co-mentioned countries. When the mouse leaves, everything fades back. I added a generation counter to prevent animation interleaving when the user moves quickly between countries.
+This was the most time-consuming change of the entire project, but absolutely worth it. I merged all separate map sections into a single unified world map where the user cycles through modes: co-occurrence, trend arrows, year heatmap, US city bubbles with metro sub-zooms into NYC, LA, and SF, and finally an exit credits page. The result feels like an app rather than a scrolling website, and I really like how it turned out.
 
-The tooltip was expanded into a side panel showing the country name, total headline mentions, an animated sparkline of coverage over time, and a ranked list of the top co-mentioned countries.
+I also added a new year heatmap mode where each country is colored by its front page mention count for a selected year, using a choropleth with a slider to scrub through 2000-2023. The US city bubble map is now part of the world map too - when the user reaches it, the map smoothly zooms into the US by animating the SVG viewBox, and the city bubbles pop in with staggered transitions.
 
-## Front page map and bubble map improvements
+## Title and exit overlays
 
-The trend arrow map and US city bubble map both received animated sparkline tooltips showing yearly coverage percentages. The bubble map now dims all other bubbles when hovering over a city, creating a spotlight effect.
+The header and a credits page were integrated as the first and last modes. Both are fixed-position overlays on top of the map. The main difficulty was event propagation - the overlays block wheel events from reaching the map underneath, so I had to attach the same scroll handler to all overlay elements independently.
 
-## Data normalization
+## Mobile support
 
-Investigating the trend arrows revealed that almost every country showed decreasing coverage. This turned out to be because the NYT published roughly 110,000 articles per year in the early 2000s but only around 50,000 in recent years. I updated all preprocessing to normalize counts as a percentage of total articles per year. For consistency, dates 2024 and 2025 are excluded from all data throughout this report.
+I added full touch support for mobile devices. On the title page, the user can swipe down or tap to enter. Navigation between modes uses tappable dots at the bottom of the screen. Countries and bubbles respond to tap instead of hover, with a tap-elsewhere-to-dismiss pattern. Tooltips appear as a fixed bar at the bottom of the screen, and the connection panel slides up as a bottom sheet.
 
-I also switched country extraction from scanning all text fields to headlines only, since the abstract and snippet fields inflated co-occurrence counts by repeating the same information.
+![Desktop](images/slider_final.png){ width=58% } ![Mobile](images/slider_final_mobile.png){ width=28% }
+
+*Left: Desktop with hover tooltips. Right: Mobile with horizontal scroll and navigation dots.*
+
+The map is rendered wider than the viewport on mobile using a horizontal scroll container, so it has a usable size despite the portrait orientation. I also built a precision bubble selector for the US city map - the user toggles precision mode, then drags to aim at bubbles with the selection point offset above their finger, and the nearest bubble highlights. This was a lot more work than I initially thought it would be, but it works really well - the user can now precisely select even the smallest bubbles on a phone screen.
 
 ## AI disclosure
 
-- Co-occurrence hover interaction and sparkline tooltips were AI-assisted
-- Data normalization pipeline was AI-assisted
+- Title/exit overlay integration and event propagation fixes were AI-assisted
+- Mobile touch support (swipe navigation, tap interactions, precision bubble selector) was AI-assisted

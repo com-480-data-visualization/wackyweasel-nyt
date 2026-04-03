@@ -1,26 +1,21 @@
-# Week 7 - March 30 - April 5, 2026
+# Week 8 - April 6-12, 2026
 
-## Unified world map
+## Trend range slider
 
-This was the most time-consuming change of the entire project, but absolutely worth it. I merged all separate map sections into a single unified world map where the user cycles through modes: co-occurrence, trend arrows, year heatmap, US city bubbles with metro sub-zooms into NYC, LA, and SF, and finally an exit credits page. The result feels like an app rather than a scrolling website, and I really like how it turned out.
+I added a dual-handle range slider to the trend arrow map that lets the user select a custom year range (e.g. 2005-2015) instead of always computing trends over the full 2000-2023 period. The arrows recompute in real time as the range changes, which makes it possible to discover patterns that are invisible in the full-range view - like how Iraq's coverage spiked during the war years and declined after, or how Ukraine only becomes significant after 2014.
 
-The year heatmap replaced the previous arrow-based year view with a choropleth where each country is colored by its front page mention count. The US city bubble map is now part of the world map - when the user reaches it, the map smoothly zooms into the US by animating the SVG viewBox, and the city bubbles pop in with staggered transitions.
+The slider also supports keyboard control: arrow keys move the end year, shift+arrow moves the start year. The tooltip now shows a mini bar chart with the yearly front page share for the selected range and a dashed trendline.
 
-## Title and exit overlays
+## Stable trend detection
 
-The header and a credits page were integrated as the first and last modes. Both are fixed-position overlays on top of the map. The main difficulty was event propagation - the overlays block wheel events from reaching the map underneath, so I had to attach the same scroll handler to all overlay elements independently.
+Countries with very small trends relative to their own average coverage now get a gray horizontal arrow instead of a colored diagonal one, indicating "stable" coverage. The threshold is based on the ratio of the slope to the country's mean. I also discovered that the raw article counts were misleading because the NYT's total output dropped from ~110k articles/year in 2000 to ~50k in 2023. All trend data is now normalized as a percentage of total front page articles per year, which removes this distortion.
 
-## Mobile support
+## Missing country names
 
-I added full touch support for mobile devices. On the title page, the user can swipe down or tap to enter. Navigation between modes uses tappable dots at the bottom of the screen. Countries and bubbles respond to tap instead of hover, with a tap-elsewhere-to-dismiss pattern. Tooltips appear as a fixed bar at the bottom of the screen, and the connection panel slides up as a bottom sheet.
-
-![Desktop](images/slider_final.png){ width=58% } ![Mobile](images/slider_final_mobile.png){ width=28% }
-
-*Left: Desktop with hover tooltips. Right: Mobile with horizontal scroll and navigation dots.*
-
-The map is rendered wider than the viewport on mobile using a horizontal scroll container, so it has a usable size despite the portrait orientation. I also built a precision bubble selector for the US city map - the user toggles precision mode, then drags to aim at bubbles with the selection point offset above their finger, and the nearest bubble highlights. This was a lot more work than I initially thought it would be, but it works really well - the user can now precisely select even the smallest bubbles on a phone screen.
+I discovered that several countries on the map were showing as numeric IDs (like "090" for Solomon Islands) because they were missing from the TopoJSON-to-ISO3 mapping. I added 32 missing country codes and a name fallback dictionary. I also found that the preprocessing script was missing several countries from its search dictionary (like Antarctica, Timor-Leste, and Solomon Islands among others). Both were fixed and the dataset was regenerated.
 
 ## AI disclosure
 
-- Title/exit overlay integration and event propagation fixes were AI-assisted
-- Mobile touch support (swipe navigation, tap interactions, precision bubble selector) was AI-assisted
+- Trend range slider with dual handles and keyboard control was AI-assisted
+- Stable trend detection logic was AI-assisted
+- Missing country identification and preprocessing updates were AI-assisted
